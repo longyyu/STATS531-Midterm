@@ -1,14 +1,15 @@
 ---
-title: "An Analysis of Lake Michigan-Huron Water Levels, ????-2021"
-subtitle: "STATS531 Midterm Project, W21"
-author: "Eric Chen (ericch), Yanyu Long (longyyu)"
-date: "Feb 25, 2021"
-output: 
+title: "An Analysis of Lake Michigan-Huron Water Levels, 2010-2021"
+author: "Eric Chen, Yanyu Long"
+output:
   html_document:
-    toc: true
+    theme: flatly
+    toc: yes
     toc_depth: 2
+subtitle: STATS 531 Midterm Project (W21)
 ---
 
+------------
 
 ```{r setup, include=FALSE}
 knitr::opts_chunk$set(
@@ -42,7 +43,6 @@ pre { /* Scrollable code block */
 }
 ```
 
-
 ```{r, echo = FALSE}
 opar = par()
 library(tidyverse)
@@ -51,7 +51,7 @@ generate_aic_table=function(data, P, Q, D=0, ...){
 	table=matrix(NA, (P+1), (Q+1))
 	for(p in 0:P) {
 		for(q in 0:Q) {
-		  table[p + 1,q + 1] = arima(data, order = c(p, D, q), ...)$aic
+		  table[p + 1,q + 1] = arima(data, order = c(p, D, q), method="ML")$aic
 		}
 	}
 	dimnames(table) = list(paste("AR", 0:P, sep=""), paste("MA", 0:Q, sep=""))
@@ -84,77 +84,86 @@ generate_acf_qqplot = function(model) {
 }
 ```
 
+## Outline
+
+[DELETE THIS WHEN FINISHED!]{.comment}
+
+- Seasonal analysis
+  - spectrogram
+  - trend + noise + cycles decomposition
+- trend fitting
+  - ARIMA
+  - linear regression with ARMA errors?
+- fitting an ARMA model
+  - AIC table
+  - investigate roots
+  - profile likelihood?
+  - some tests?
+- comparing to full data (1860-2021?)
 
 ------------
 
-## Introduction.
+## Introduction
 
-The Great Lakes are a major source of water, recreation, and industry for over 30 million people. However, in recent years, residents have been concerned about steadily rising lake levels, as evidenced by these news articles from the [Green Bay Gazette](https://www.greenbaypressgazette.com/story/news/local/oconto-county/2020/08/04/lake-michigan-breaks-34-year-old-high-water-record/3294377001/), [Detroit Free Press](https://www.freep.com/story/news/local/michigan/2020/07/17/great-lakes-water-levels-records-erosion-damage/5450910002/), [Washington Post](https://www.washingtonpost.com/weather/2019/11/08/great-lakes-water-levels-have-swung-record-lows-record-highs-heres-why/), and more. Rising lake levels can result in property damage, shoreline erosion, and economic disruption. Tying into the larger conversation about climate change, environmental scientists have been investigating the potential causes and implications of high water in the Great Lakes.
+The Great Lakes are a major source of water, recreation, and industry for over 30 million people, including most Michigan residents. However, in recent years, there has been a growing concern over steadily rising water levels: news sources such as the [Green Bay Press-Gazette](https://www.greenbaypressgazette.com/story/news/local/oconto-county/2020/08/04/lake-michigan-breaks-34-year-old-high-water-record/3294377001/), the [Detroit Free Press](https://www.freep.com/story/news/local/michigan/2020/07/17/great-lakes-water-levels-records-erosion-damage/5450910002/), and [The Washington Post](https://www.washingtonpost.com/weather/2019/11/08/great-lakes-water-levels-have-swung-record-lows-record-highs-heres-why/) have highlighted the resulting property damage, shoreline erosion, and economic disruption. As such, environmental scientists have been investigating the potential causes and implications of high water in the Great Lakes, tying this into the larger conversation about climate change. 
 
-In this project, we consider the variation in water levels in Lake Michigan-Huron over the time period $????$-2021. We hope to identify some trends in ?
+In this project, we consider the variation in water levels in Lake Michigan-Huron over the time period $????$-2021. [include goals and objectives here] 
 
-The data consists of monthly lake level means and was downloaded from the Great Lakes Environmental Research Laboratory (GLERL), an arm of the National Oceanic and Atmospheric Administration (NOAA).
+----
 
-- 
-
-N.B.: Lake Michigan and Lake Huron are hydrologically [one lake](https://en.wikipedia.org/wiki/Lake_Michigan%E2%80%93Huron), since the flow of water through the Straits of Mackinac keeps their respective water levels in near-equilibrium. 
+**NB**: Lake Michigan and Lake Huron are hydrologically [one lake](https://en.wikipedia.org/wiki/Lake_Michigan%E2%80%93Huron), since the flow of water through the Straits of Mackinac keeps their respective water levels in near-equilibrium. 
 
 ------------
 
 ## Data
 
-[Data cleaning, exploratory analysis, spectrum analysis ... ]{.comment}
-
-
-The wheat price data come from the USDA Agricultural Marketing Service. Specifically, we are analyzing the cash prices (dollars per bushel) of No. 2 soft red winter wheat, Chicago. 
+The data consists of monthly lake level means and was downloaded from the Great Lakes Environmental Research Laboratory (GLERL), an arm of the National Oceanic and Atmospheric Administration (NOAA). We plot the data below.
 
 
 ```{r echo=FALSE}
 ## reading in and formatting data
-
-months = c(1:12)
-names(months) = c("Jan", "Feb", "Mar", "Apr", "May", "Jun", "Jul", "Aug", "Sep", "Oct", "Nov", "Dec")
-
 data = read.csv('michigan_huron_level.csv')
-date_labels = substr(data$Date, 1, nchar(data$Date) - 3)
 data$Date = as.Date(data$Date)
+level <- data$MSL..ft.
 ```
 
 
-```{r, fig.width=7, fig.height=4}
+```{r, echo=FALSE, fig.width=8, fig.height=5}
 data %>%
   ggplot(aes(Date, MSL..ft.)) + 
       theme_bw() +
-      geom_line(color="#69b3a2") +
+      geom_line(color="#69b3a2", size=1) +
       # scale_color_brewer(palette = "Set3") +
-      ggtitle('Lake Michigan-Huron Water Levels, ????-2021') +
+      ggtitle('Lake Michigan-Huron Water Levels, 2010-2021') +
       ylab("Mean Lake Level (ft)") +
+      scale_x_date(breaks='1 year', date_labels='%Y')+
       theme(axis.text.x=element_text(angle=60, hjust=1), plot.title=
             element_text(hjust=0.5)) 
 ```
 
-```{r, fig.width = 6, fig.height = 5}
-plot(ts.union(ts_price, ts_import))
+```{r, echo=FALSE, fig.width = 6, fig.height = 5}
+# plot(ts.union(ts_price, ts_import))
 ```
 
-### Spectrum analysis  
+### Spectral Analysis.
 
-```{r, fig.width = 6, fig.height = 5}
-stl(ts_price, s.window = "periodic") %>% plot
+[Data cleaning, exploratory analysis, spectrum analysis ... ]{.comment}
+
+```{r, echo=FALSE, fig.width = 6, fig.height = 5}
+stl(ts(level, frequency=12), s.window = 12) %>% plot
 ```
 
-```{r, fig.width = 6, fig.height = 5}
+```{r, echo=FALSE, fig.width = 6, fig.height = 5}
 # transform Date to numeric type
-date_num = seq(from = 1970 + 5/12, length = nrow(wheat_price), by = 1/12)
+date_num = seq(from = 2010, length = nrow(data), by = 1/12)
 
-price = data$
-p_low = ts(loess(price ~ date_num, span = 0.5)$fitted, 
-           start = c(1970, 6), frequency = 12)
-p_high = ts(price - loess(price ~ date_num, span = 0.1)$fitted, 
-            start = c(1970, 6), frequency = 12)
-p_cycles = price - p_low - p_high
-plot(ts.union(price, p_low, p_high, p_cycles),
-     main = "Decomposition of wheat prices as trend + noise + cycles")
+trend = ts(loess(level ~ date_num, span = 0.5)$fitted, 
+           start = c(2010, 6), frequency = 12)
+noise = ts(level - loess(level ~ date_num, span = 0.1)$fitted, 
+            start = c(2010, 6), frequency = 12)
+cycles = level - trend - noise
+plot(ts.union(level, trend, noise, cycles),
+     main = "Decomposition of lake levels as trend + noise + cycles")
 ```
 
 
@@ -171,13 +180,16 @@ plot(ts.union(price, p_low, p_high, p_cycles),
 
 [Model selection, residual analysis, causality, invertibility, ...]{.comment}
 
-```{r, fig.width = 6, fig.height = 3}
-attach(wheat_allvar)
+```{r echo=FALSE}
+attach(data)
 
-## Model 1: ARMA
-generate_aic_table(Price, P=5, Q=5, D=0) %>% 
-  format_aic_tables(caption = "AIC of $ARMA(p, q)$ models, $0 \\leq p, q \\leq 5$")
-m1 = arima(Price, c(5, 0, 4))
+generate_aic_table(MSL..ft., P=5, Q=5, D=0) %>% 
+  format_aic_tables(caption = "AIC of $\\mathrm{ARMA}(p, q)$ models, $0 \\leq p, q \\leq 5$")
+```
+
+```{r, echo=FALSE, fig.width = 6, fig.height = 3}
+# Model 1: ARMA
+m1 = arima(level, c(5, 0, 4))
 generate_acf_qqplot(m1)
 params = coef(m1)
 roots = list(
@@ -185,12 +197,16 @@ roots = list(
   ma = polyroot(c(1, params[grep("^ma", names(params))]))
 )
 lapply(roots, abs)
+```
 
+```{r, echo=FALSE}
+generate_aic_table(MSL..ft., P=5, Q=5, D=1) %>%
+  format_aic_tables(caption = "AIC of $\\mathrm{ARIMA}(p, 1, q)$ models, $0 \\leq p, q \\leq 5$")
+```
 
-## Model 2: ARIMA
-generate_aic_table(Price, P=5, Q=5, D=1) %>% 
-  format_aic_tables(caption = "AIC of $ARIMA(p, 1, q)$ models, $0 \\leq p, q \\leq 5$")
-m2 = arima(Price, c(5, 1, 4))
+```{r echo=FALSE}
+# Model 2: ARIMA
+m2 = arima(MSL..ft., c(3, 1, 3), method='ML')
 generate_acf_qqplot(m2)
 params = coef(m2)
 roots = list(
@@ -202,33 +218,42 @@ lapply(roots, abs)
 
 [Similarly, we can fit SARMA models and regression models with ARMA errors ...]{.comment}
 
-```{r, fig.width = 6, fig.height = 3}
-## Model 3: SARMA
-# generate_aic_table(
-#   Price, P=5, Q=5, D=0,
-#   seasonal = list(order = c(1, 0, 0), period = 12)
-# ) %>%
-#   format_aic_tables(caption = "AIC of $SARMA(p, q) \\times (1, 0)_{12}$ models, $0 \\leq p, q \\leq 5$")
-m3 = arima(Price, c(5, 0, 5), seasonal = list(order = c(1, 0, 0), period = 12))
+```{r, echo=FALSE, fig.width = 6, fig.height = 3}
+generate_aic_table(
+  level, P=5, Q=5, D=0,
+  seasonal = list(order = c(1, 0, 0), period = 12)
+) %>%
+  format_aic_tables(caption = "AIC of $\\mathrm{SARMA}(p, q) \\times (1, 0)_{12}$ models, $0 \\leq p, q \\leq 5$")
+```
+
+```{r echo=FALSE}
+# Model 3: SARMA
+m3 = arima(level, c(5, 0, 4), seasonal = list(order = c(1, 0, 0), period = 12))
 generate_acf_qqplot(m3)
-
-
-## Model 4: Regression with ARMA errors
-generate_aic_table(Price, P=5, Q=5, D=0, xreg = Import) %>% 
-  format_aic_tables(caption = "AIC of Regression with $ARMA(p, q)$ errors, $0 \\leq p, q \\leq 5$")
-m4 = arima(Price, c(5, 0, 5), xreg = Import)
-generate_acf_qqplot(m4)
-
-
-detach(wheat_allvar)
 ```
 
 
-```{r, fig.width=6, fig.height=3}
+
+```{r echo=FALSE}
+# generate_aic_table(level, P=5, Q=5, D=0, xreg=???) %>% 
+#   format_aic_tables(caption = "AIC of Regression with $\\mathrm{ARMA}(p, q)$ errors, $0 \\leq p, q \\leq 5$")
+```
+
+```{r echo=FALSE}
+## Model 4: Regression with ARMA errors
+# m4 = arima(level, c(5, 0, 5), xreg=???)
+# generate_acf_qqplot(m4)
+detach(data)
+```
+
+
+```{r, echo=FALSE, fig.width=8, fig.height=5}
 ## plotting out fitted values
-plot(wheat_allvar$Price, type = "l")
-lines(wheat_allvar$Price - m1$resid, lty = 2, col = "red")
-lines(wheat_allvar$Price - m2$resid, lty = 2, col = "green")
+plot(level, type = "l")
+lines(level - m1$resid, lty = 2, col = "red")
+lines(level - m2$resid, lty = 2, col = "green")
+lines(level - m3$resid, lty = 2, col = "blue")
+title(main='Fitted Values of Models 1, 2, and 3')
 ```
 
 
@@ -240,6 +265,8 @@ lines(wheat_allvar$Price - m2$resid, lty = 2, col = "green")
 ------------
 
 ## References  
+
+https://tidesandcurrents.noaa.gov/waterlevels.html?id=9075014&type=Tide+Data&name=Harbor%20Beach&state=MI (data!)
 
 https://www.epa.gov/greatlakes/facts-and-figures-about-great-lakes 
 
