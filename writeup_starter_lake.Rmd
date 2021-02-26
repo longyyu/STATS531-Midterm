@@ -88,17 +88,23 @@ generate_acf_qqplot = function(model) {
 
 [DELETE THIS WHEN FINISHED!]{.comment}
 
-- Seasonal analysis
+- seasonal analysis
   - spectrogram
   - trend + noise + cycles decomposition
 - trend fitting
   - ARIMA
-  - linear regression with ARMA errors?
+  - linear regression with ARMA errors? (needs exogenous variable)
 - fitting an ARMA model
+  - use trend and seasonality to inform model (SARIMA?)
   - AIC table
+  - goodness of fit
+    - residual plot
+    - ACF of residuals
+    - QQ-plot / Shapiro-Wilk test for normality
   - investigate roots
   - profile likelihood?
-  - some tests?
+  - chi-squared test for nested models?
+  
 - comparing to full data (1860-2021?)
 
 ------------
