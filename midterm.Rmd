@@ -97,7 +97,7 @@ generate_acf_qqplot = function(model) {
 - seasonal analysis
   - spectrogram
   - trend + noise + cycles decomposition
-- trend fitting
+- trend fitting / detrending
   - ARIMA
   - linear regression with ARMA errors? (needs exogenous variable)
 - fitting an ARMA model
@@ -112,6 +112,9 @@ generate_acf_qqplot = function(model) {
   - chi-squared test for nested models?
   
 - comparing to full data (1860-2021?)
+- investigate how other lakes can act as predictor for Lake Michigan
+  - motivation: is there a lag in the warmer lake (Erie) that can be used for prediction?
+  - cross-spectrum, cross-correlation, coherency
 
 ------------
 
