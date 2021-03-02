@@ -92,29 +92,41 @@ generate_acf_qqplot = function(model) {
 
 ## Outline
 
-[DELETE THIS WHEN FINISHED!]{.comment}
+**Use full data: 1980 - 2020**
 
-- seasonal analysis
-  - spectrogram
-  - trend + noise + cycles decomposition
-- trend fitting / detrending
-  - ARIMA
-  - linear regression with ARMA errors? (needs exogenous variable)
-- fitting an ARMA model
-  - use trend and seasonality to inform model (SARIMA?)
-  - AIC table
-  - goodness of fit
+[DELETE THIS WHEN FINISHED!]{.comment}
+- 1) [Eric] introduction and motivation
+
+- 2) [Yanyu] plot the data, describe the data
+
+- 3) fitting an ARMA model
+  - [Eric] check for a trend
+  - [Eric] check for seasonality
+    - spectrogram
+    - trend + noise + cycles decomposition
+  - [Eric] pick appropriate model class (SARMA if there is seasonality, ARIMA if there is a trend, etc.)
+  
+  - [Yanyu] AIC table
+  - [Yanyu] goodness of fit
     - residual plot
     - ACF of residuals
     - QQ-plot / Shapiro-Wilk test for normality
-  - investigate roots
-  - profile likelihood?
-  - chi-squared test for nested models?
   
-- comparing to full data (1860-2021?)
-- investigate how other lakes can act as predictor for Lake Michigan
-  - motivation: is there a lag in the warmer lake (Erie) that can be used for prediction?
+  - [Yanyu] investigate roots
+  - [Yanyu] profile likelihood?
+  - [Yanyu] chi-squared test for nested models?
+  
+- 4) [Eric] investigate how other lakes can act as predictor for Lake Michigan
+  - motivation: is there a lag in the warmer lake (Erie) that can be used for prediction? Warmer lakes may be more susceptible to climactic changes
+  - plot the data, describe the data
   - cross-spectrum, cross-correlation, coherency
+  - linear regression with ARMA errors 
+    - goodness of fit analysis, likelihood-ratio tests, etc.
+  - conduct subset of analyses from (2) on Lake Erie data
+    - fit model from (2)
+    - run some diagnostics / goodness-of-fit
+    
+- 5) [Eric] conclusion
 
 ------------
 
