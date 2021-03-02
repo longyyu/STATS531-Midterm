@@ -134,7 +134,7 @@ generate_acf_qqplot = function(model) {
 
 The Great Lakes are a major source of water, recreation, and industry for over 30 million people, including most Michigan residents. However, in recent years, there has been a growing concern over steadily rising water levels: news sources such as the [Green Bay Press-Gazette](https://www.greenbaypressgazette.com/story/news/local/oconto-county/2020/08/04/lake-michigan-breaks-34-year-old-high-water-record/3294377001/), the [Detroit Free Press](https://www.freep.com/story/news/local/michigan/2020/07/17/great-lakes-water-levels-records-erosion-damage/5450910002/), and [The Washington Post](https://www.washingtonpost.com/weather/2019/11/08/great-lakes-water-levels-have-swung-record-lows-record-highs-heres-why/) have highlighted the resulting property damage, shoreline erosion, and economic disruption. As such, environmental scientists have been investigating the potential causes and implications of high water in the Great Lakes, tying this into the larger conversation about climate change. 
 
-In this project, we consider the variation in water levels in Lake Michigan-Huron over the time period $????$-2021.  
+In this project, we consider the variation in water levels in Lake Michigan-Huron over the time period 1980-2021.  
 
 [include goals and objectives here]{.comment} 
 
@@ -151,7 +151,7 @@ The data consists of monthly lake level means and was downloaded from the Great 
 
 ```{r echo=FALSE}
 ## reading in and formatting data
-data = read.csv('michigan_huron_level.csv', colClasses = list(Date = "Date")) %>%
+data = read.csv('michigan_huron.csv', colClasses = list(Date = "Date")) %>%
   rename_with(~ str_extract(.x, "([[:alpha:]]+)")) # get rid of `.` in colnames
 level = data$MSL
 ```
@@ -169,6 +169,12 @@ data %>%
       theme(axis.text.x=element_text(angle=60, hjust=1), plot.title=
             element_text(hjust=0.5)) 
 ```
+
+------------
+
+## Methods and Analysis
+
+### Detrending
 
 ### Spectral Analysis
 
@@ -189,19 +195,12 @@ plot(ts.union(level, trend, noise, cycles),
      main = "Decomposition of lake levels as trend + noise + cycles")
 ```
 
+### Model Selection
 
 
-------------
+### Diagnostics and Goodness-of-Fit
 
-## Methods  
-
-[Equations, hypotheses, notations, ...]{.comment}
-
-------------
-
-## Results  
-
-[Model selection, residual analysis, causality, invertibility, ...]{.comment}
+[residual analysis, causality, invertibility, ...]{.comment}
 
 ```{r echo=FALSE}
 attach(data)
@@ -288,9 +287,13 @@ legend(
 ```
 
 
+## "Extension" (Part 3)
+
+
 ------------
 
-## Conclusions  
+
+## Conclusion
 
 
 ------------
