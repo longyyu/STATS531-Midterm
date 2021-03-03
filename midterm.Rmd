@@ -231,18 +231,18 @@ ggplot() +
 
 ### Spectral Analysis
 
-```{r, echo=FALSE, fig.width = 6, fig.height = 5}
-stl(ts(level, start = c(2010, 2), frequency=12), s.window = 12) %>% plot
+```{r, echo=TRUE, fig.width = 6, fig.height = 5}
+stl(ts(level, start = c(1980, 2), frequency=12), s.window = 12) %>% plot
 ```
 
-```{r, echo=FALSE, fig.width = 6, fig.height = 5}
+```{r, echo=TRUE, fig.width = 6, fig.height = 5}
 # transform Date to numeric type
-date_num = seq(from = 2010 + 1/12, length = nrow(data_mich), by = 1/12)
+date_num = seq(from = 1980 + 1/12, length = nrow(data_mich), by = 1/12)
 
 trend = ts(loess(level ~ date_num, span = 0.5)$fitted,
-           start = c(2010, 2), frequency = 12)
+           start = c(1980, 2), frequency = 12)
 noise = ts(level - loess(level ~ date_num, span = 0.1)$fitted,
-           start = c(2010, 2), frequency = 12)
+           start = c(1980, 2), frequency = 12)
 cycles = level - trend - noise
 plot(ts.union(level, trend, noise, cycles),
      main = "Decomposition of lake levels as trend + noise + cycles")
@@ -256,15 +256,13 @@ plot(ts.union(level, trend, noise, cycles),
 [residual analysis, causality, invertibility, ...]{.comment}
 
 ```{r echo=FALSE}
-attach(data_mich)
-
-generate_aic_table(MSL, P=5, Q=5, D=0) %>%
+generate_aic_table(level, P=5, Q=5, D=0) %>%
   format_aic_tables(caption = "AIC of $\\mathrm{ARMA}(p, q)$ models, $0 \\leq p, q \\leq 5$")
 ```
 
 ```{r, echo=FALSE, fig.width = 6, fig.height = 3}
 # Model 1: ARMA
-m1 = arima(level, c(5, 0, 4), method='ML')
+m1 = arima(level, c(3, 0, 3), method='ML')
 generate_acf_qqplot(m1)
 params = coef(m1)
 roots = list(
@@ -275,13 +273,13 @@ lapply(roots, abs)
 ```
 
 ```{r, echo=FALSE}
-generate_aic_table(MSL, P=5, Q=5, D=1) %>%
+generate_aic_table(level, P=5, Q=5, D=1) %>%
   format_aic_tables(caption = "AIC of $\\mathrm{ARIMA}(p, 1, q)$ models, $0 \\leq p, q \\leq 5$")
 ```
 
 ```{r echo=FALSE, fig.width = 6, fig.height = 3}
 # Model 2: ARIMA
-m2 = arima(MSL, c(3, 1, 3), method='ML')
+m2 = arima(level, c(3, 1, 2), method='ML')
 generate_acf_qqplot(m2)
 params = coef(m2)
 roots = list(
@@ -303,7 +301,7 @@ generate_aic_table(
 
 ```{r echo=FALSE, fig.width = 6, fig.height = 3}
 # Model 3: SARMA
-m3 = arima(level, c(5, 0, 0), method='ML',
+m3 = arima(level, c(5, 0, 3), method='ML',
            seasonal = list(order = c(1, 0, 0), period = 12))
 generate_acf_qqplot(m3)
 ```
@@ -311,15 +309,14 @@ generate_acf_qqplot(m3)
 
 
 ```{r echo=FALSE}
-# generate_aic_table(level, P=5, Q=5, D=0, xreg=???) %>%
-#   format_aic_tables(caption = "AIC of Regression with $\\mathrm{ARMA}(p, q)$ errors, $0 \\leq p, q \\leq 5$")
+generate_aic_table(level, P=5, Q=5, D=0, xreg=data_erie$MSL) %>%
+  format_aic_tables(caption = "AIC of Regression with $\\mathrm{ARMA}(p, q)$ errors, $0 \\leq p, q \\leq 5$")
 ```
 
 ```{r echo=FALSE}
-## Model 4: Regression with ARMA errors
-# m4 = arima(level, c(5, 0, 5), method='ML', xreg=???)
-# generate_acf_qqplot(m4)
-detach(data_mich)
+# Model 4: Regression with ARMA errors
+m4 = arima(level, c(5, 0, 2), method='ML', xreg=data_erie$MSL)
+generate_acf_qqplot(m4)
 ```
 
 
