@@ -1,5 +1,5 @@
 ---
-title: "An Analysis of Lake Michigan-Huron Water Levels, 2010-2021"
+title: "An Analysis of Lake Michigan-Huron Water Levels, 1980-2021"
 author: "Eric Chen, Yanyu Long"
 output:
   html_document:
@@ -134,9 +134,7 @@ generate_acf_qqplot = function(model) {
 
 The Great Lakes are a major source of water, recreation, and industry for over 30 million people, including most Michigan residents. However, in recent years, there has been a growing concern over steadily rising water levels: news sources such as the [Green Bay Press-Gazette](https://www.greenbaypressgazette.com/story/news/local/oconto-county/2020/08/04/lake-michigan-breaks-34-year-old-high-water-record/3294377001/), the [Detroit Free Press](https://www.freep.com/story/news/local/michigan/2020/07/17/great-lakes-water-levels-records-erosion-damage/5450910002/), and [The Washington Post](https://www.washingtonpost.com/weather/2019/11/08/great-lakes-water-levels-have-swung-record-lows-record-highs-heres-why/) have highlighted the resulting property damage, shoreline erosion, and economic disruption. As such, environmental scientists have been investigating the potential causes and implications of high water in the Great Lakes, tying this into the larger conversation about climate change. 
 
-In this project, we consider the variation in water levels in Lake Michigan-Huron over the time period 1980-2021.  
-
-[include goals and objectives here]{.comment} 
+In this project, we consider the variation in water levels in Lake Michigan-Huron over the time period 1980-2021, given that the majority of residents in the Great Lakes watershed live by Lake Michigan.  
 
 ----
 
