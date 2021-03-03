@@ -40,6 +40,7 @@ pre { /* Scrollable code block */
   color: Darkred;
   border-left-style: solid;
   border-color: #f2f2f2;
+  font-weight: 600;
 }
 ```
 
@@ -88,13 +89,22 @@ generate_acf_qqplot = function(model) {
   qqline(as.numeric(model$resid))
   par(opar)
 }
+
+summary_data = function(df, caption = NULL) {
+  df %>%
+    summary() %>%
+    knitr::kable(caption = caption) %>%
+    kableExtra::column_spec(column = 1:length(df)+1, width_min = "10em") %>%
+    kableExtra::kable_styling(bootstrap_options = "striped", full_width = FALSE)
+}
 ```
 
 ## Outline
 
 **Use full data: 1980 - 2020**
 
-[DELETE THIS WHEN FINISHED!]{.comment}
+[DELETE THIS WHEN FINISHED!]{.comment}  
+
 - 1) [Eric] introduction and motivation
 
 - 2) [Yanyu] plot the data, describe the data
@@ -144,28 +154,73 @@ In this project, we consider the variation in water levels in Lake Michigan-Huro
 
 ## Data
 
-The data consists of monthly lake level means and was downloaded from the Great Lakes Environmental Research Laboratory (GLERL), an arm of the National Oceanic and Atmospheric Administration (NOAA). We plot the data below.
+The data consists of monthly lake level means from February 1980 to January 2021 and was downloaded from the Great Lakes Environmental Research Laboratory (GLERL), an arm of the National Oceanic and Atmospheric Administration (NOAA). There is no missing values in the data. 
 
 
-```{r echo=FALSE}
+```{r, echo=FALSE}
 ## reading in and formatting data
-data = read.csv('michigan_huron.csv', colClasses = list(Date = "Date")) %>%
-  rename_with(~ str_extract(.x, "([[:alpha:]]+)")) # get rid of `.` in colnames
-level = data$MSL
+data_mich = read.csv('michigan_huron.csv', colClasses = list(Date = "Date")) %>%
+  rename_with(~ str_extract(.x, "([[:alpha:]]+)")) %>% # get rid of `.` in colnames
+  select(c("Date", "MSL")) 
+level = data_mich$MSL
 ```
 
+```{r, echo=FALSE}
+data_mich %>%
+  summary_data(caption = "**Table 1.** Summary statistics of the lake Michigan-Huron data")
+```
 
-```{r, echo=FALSE, fig.width=8, fig.height=4}
-data %>%
+The water level had two noticeable peaks in October 1986 and July 1997, hit bottom in 2013, and has been steadily rising since then. 
+
+```{r, echo=FALSE, fig.width=8, fig.height=3.5, fig.cap="**Figure 1.** Lake Michigan-Huron Water Levels, 1980-2021"}
+date_breaks = with(data_mich, seq.Date(from = min(Date), to = max(Date), by = '10 years'))
+data_mich %>%
   ggplot(aes(Date, MSL)) + 
-      theme_bw() +
-      geom_line(color="#69b3a2", size=1) +
-      # scale_color_brewer(palette = "Set3") +
-      ggtitle('Lake Michigan-Huron Water Levels, 2010-2021') +
-      ylab("Mean Lake Level (ft)") +
-      scale_x_date(breaks='1 year', date_labels='%Y')+
-      theme(axis.text.x=element_text(angle=60, hjust=1), plot.title=
-            element_text(hjust=0.5)) 
+    theme_bw() +
+    geom_line(color="#69b3a2", size=1) +
+    ylab("Mean Lake Level (ft)") +
+    scale_x_date(breaks=date_breaks, date_labels='%Y')
+```
+
+[Below is the EDA of the lake Erie dataset, move to section 3 later?]{.comment}
+
+```{r, echo=FALSE}
+data_erie = read.csv("erie.csv", colClasses = list(Date = "Date")) %>%
+  rename_with(~ str_extract(.x, "([[:alpha:]]+)")) %>% # get rid of `.` in colnames
+  select(c("Date", "MSL"))
+```
+
+```{r, echo=FALSE}
+data_erie %>%
+  summary_data(caption = "**Table x.** Summary statistics of the lake Erie data")
+```
+
+The water level of Lake Erie peaked in June 1986 and June 1997, and has presented an upward trend since 2000. 
+
+```{r, echo=FALSE, fig.width=8, fig.height=3.5, fig.cap="**Figure x.** Lake Erie Water Levels, 1980-2021"}
+data_erie %>%
+  ggplot(aes(Date, MSL)) + 
+    theme_bw() +
+    geom_line(color="#69b3a2", size=1) +
+    ylab("Mean Lake Level (ft)") +
+    scale_x_date(breaks=date_breaks, date_labels='%Y')
+```
+
+Plotting the centered water levels of lake Erie and lake Michigan-Huron together, we can see that the two sets of data present a similar overall trend. 
+
+```{r, echo=FALSE, fig.width=8, fig.height=3.5, fig.cap="**Figure x.** Centered water level of Lake Erie and Lake Michigan-Huron"}
+ggplot() + 
+  theme_bw() +
+  geom_line(data=data_erie, 
+            aes(Date, MSL-mean(MSL, na.rm=T), alpha="Erie"), 
+            color="#69b3a2", size=1) +
+  geom_line(data=data_mich, 
+            aes(Date, MSL-mean(MSL, na.rm=T), alpha="Michigan-Huron"),
+            color="#69b3a2", size=1) +
+  ylab("Centered Mean Lake Level (ft)") +
+  scale_x_date(breaks=date_breaks, date_labels='%Y') +
+  scale_alpha_manual(name="Lake", values = c("Michigan-Huron" = 0.4, "Erie" = 1)) +
+  theme(legend.position="bottom", legend.margin=margin(-10))
 ```
 
 ------------
@@ -182,11 +237,11 @@ stl(ts(level, start = c(2010, 2), frequency=12), s.window = 12) %>% plot
 
 ```{r, echo=FALSE, fig.width = 6, fig.height = 5}
 # transform Date to numeric type
-date_num = seq(from = 2010 + 1/12, length = nrow(data), by = 1/12)
+date_num = seq(from = 2010 + 1/12, length = nrow(data_mich), by = 1/12)
 
-trend = ts(loess(level ~ date_num, span = 0.5)$fitted, 
+trend = ts(loess(level ~ date_num, span = 0.5)$fitted,
            start = c(2010, 2), frequency = 12)
-noise = ts(level - loess(level ~ date_num, span = 0.1)$fitted, 
+noise = ts(level - loess(level ~ date_num, span = 0.1)$fitted,
            start = c(2010, 2), frequency = 12)
 cycles = level - trend - noise
 plot(ts.union(level, trend, noise, cycles),
@@ -201,9 +256,9 @@ plot(ts.union(level, trend, noise, cycles),
 [residual analysis, causality, invertibility, ...]{.comment}
 
 ```{r echo=FALSE}
-attach(data)
+attach(data_mich)
 
-generate_aic_table(MSL, P=5, Q=5, D=0) %>% 
+generate_aic_table(MSL, P=5, Q=5, D=0) %>%
   format_aic_tables(caption = "AIC of $\\mathrm{ARMA}(p, q)$ models, $0 \\leq p, q \\leq 5$")
 ```
 
@@ -248,7 +303,7 @@ generate_aic_table(
 
 ```{r echo=FALSE, fig.width = 6, fig.height = 3}
 # Model 3: SARMA
-m3 = arima(level, c(5, 0, 0), method='ML', 
+m3 = arima(level, c(5, 0, 0), method='ML',
            seasonal = list(order = c(1, 0, 0), period = 12))
 generate_acf_qqplot(m3)
 ```
@@ -256,7 +311,7 @@ generate_acf_qqplot(m3)
 
 
 ```{r echo=FALSE}
-# generate_aic_table(level, P=5, Q=5, D=0, xreg=???) %>% 
+# generate_aic_table(level, P=5, Q=5, D=0, xreg=???) %>%
 #   format_aic_tables(caption = "AIC of Regression with $\\mathrm{ARMA}(p, q)$ errors, $0 \\leq p, q \\leq 5$")
 ```
 
@@ -264,7 +319,7 @@ generate_acf_qqplot(m3)
 ## Model 4: Regression with ARMA errors
 # m4 = arima(level, c(5, 0, 5), method='ML', xreg=???)
 # generate_acf_qqplot(m4)
-detach(data)
+detach(data_mich)
 ```
 
 
@@ -277,8 +332,8 @@ lines(level - m3$resid, lty = 2, col = "blue")
 title(main='Fitted Values of Models 1, 2, and 3')
 legend(
   "topleft",
-  legend = c("Original data", "Model 1", "Model 2", "Model 3"), 
-  col = c("black", "red", "green", "blue"), 
+  legend = c("Original data", "Model 1", "Model 2", "Model 3"),
+  col = c("black", "red", "green", "blue"),
   lty = c(1, 2, 2, 2),
   bty = "n", horiz = FALSE, ncol = 2, cex = 1
 )
@@ -296,11 +351,11 @@ legend(
 
 ------------
 
-## References  
+## References
 
 1. https://tidesandcurrents.noaa.gov/waterlevels.html?id=9075014&type=Tide+Data&name=Harbor%20Beach&state=MI (data!)
 
-1. https://www.epa.gov/greatlakes/facts-and-figures-about-great-lakes 
+1. https://www.epa.gov/greatlakes/facts-and-figures-about-great-lakes
 
 1. https://en.wikipedia.org/wiki/Lake_Michigan%E2%80%93Huron
 
