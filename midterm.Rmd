@@ -1,5 +1,5 @@
 ---
-title: "An Analysis of Lake Michigan-Huron Water Levels, 1980-2021"
+title: "An Analysis of Lake Michigan-Huron Water Levels"
 author: "Eric Chen, Yanyu Long"
 output:
   html_document:
@@ -92,19 +92,18 @@ generate_acf_qqplot = function(model) {
 
 ## Outline
 
-**Use full data: 1980 - 2020**
-
 [DELETE THIS WHEN FINISHED!]{.comment}
-- 1) [Eric] introduction and motivation
 
-- 2) [Yanyu] plot the data, describe the data
+- 1) [Eric - **DONE**] introduction and motivation
+
+- 2) [Eric - **check this**] plot the data, describe the data
 
 - 3) fitting an ARMA model
-  - [Eric] check for a trend
-  - [Eric] check for seasonality
+  - [Eric - **DONE**] check for a trend
+  - [Eric - **DONE**] check for seasonality
     - spectrogram
     - trend + noise + cycles decomposition
-  - [Eric] pick appropriate model class (SARMA if there is seasonality, ARIMA if there is a trend, etc.)
+  - [Eric - **DONE**] pick appropriate model class (SARMA if there is seasonality, ARIMA if there is a trend, etc.)
   
   - [Yanyu] AIC table
   - [Yanyu] goodness of fit
@@ -132,9 +131,9 @@ generate_acf_qqplot = function(model) {
 
 ## Introduction
 
-The Great Lakes are a major source of water, recreation, and industry for over 30 million people, including most Michigan residents. However, in recent years, there has been a growing concern over steadily rising water levels: news sources such as the [Green Bay Press-Gazette](https://www.greenbaypressgazette.com/story/news/local/oconto-county/2020/08/04/lake-michigan-breaks-34-year-old-high-water-record/3294377001/), the [Detroit Free Press](https://www.freep.com/story/news/local/michigan/2020/07/17/great-lakes-water-levels-records-erosion-damage/5450910002/), and [The Washington Post](https://www.washingtonpost.com/weather/2019/11/08/great-lakes-water-levels-have-swung-record-lows-record-highs-heres-why/) have highlighted the resulting property damage, shoreline erosion, and economic disruption. As such, environmental scientists have been investigating the potential causes and implications of high water in the Great Lakes, tying this into the larger conversation about climate change. 
+The Great Lakes are a major source of water, recreation, and industry for over 30 million people, including most Michigan residents. However, in recent years, there has been a growing concern over steadily rising water levels: news sources such as the [Green Bay Press-Gazette](https://www.greenbaypressgazette.com/story/news/local/oconto-county/2020/08/04/lake-michigan-breaks-34-year-old-high-water-record/3294377001/), the [Detroit Free Press](https://www.freep.com/story/news/local/michigan/2020/07/17/great-lakes-water-levels-records-erosion-damage/5450910002/), and [The Washington Post](https://www.washingtonpost.com/weather/2019/11/08/great-lakes-water-levels-have-swung-record-lows-record-highs-heres-why/) have reported on the resulting property damage, shoreline erosion, and economic disruption. As such, environmental scientists have been investigating the potential causes and implications of high water in the Great Lakes, tying this into the larger conversation about climate change. 
 
-In this project, we consider the variation in water levels in Lake Michigan-Huron over the time period 1980-2021, given that the majority of residents in the Great Lakes watershed live by Lake Michigan.  
+In this project, we consider the variation of water levels in Lake Michigan-Huron over the time period 1980-2021, given that the majority of residents in the Great Lakes watershed live by Lake Michigan. Our goal is to identify if there is indeed a noticeable increase in water levels in the past 30 years, and to describe any other patterns that may be of interest to environmental scientists and climatologists. In addition, we may want to study how the water levels in one lake may be associated with the water levels in another lake; thus, we will cross-compare water levels between Lake Michigan and Lake Erie, the warmest Great Lake.
 
 ----
 
@@ -144,14 +143,16 @@ In this project, we consider the variation in water levels in Lake Michigan-Huro
 
 ## Data
 
-The data consists of monthly lake level means and was downloaded from the Great Lakes Environmental Research Laboratory (GLERL), an arm of the National Oceanic and Atmospheric Administration (NOAA). We plot the data below.
+The data consists of monthly lake level means and was collected by the [Center for Operational Oceanographic Products and Services](https://tidesandcurrents.noaa.gov/map/index.html?region=Lake%20Michigan) (CO-OPS), an arm of the National Oceanic and Atmospheric Administration (NOAA). We plot the data below.
 
 
 ```{r echo=FALSE}
 ## reading in and formatting data
 data = read.csv('michigan_huron.csv', colClasses = list(Date = "Date")) %>%
   rename_with(~ str_extract(.x, "([[:alpha:]]+)")) # get rid of `.` in colnames
+attach(data)
 level = data$MSL
+date = data$Date
 ```
 
 
@@ -161,7 +162,7 @@ data %>%
       theme_bw() +
       geom_line(color="#69b3a2", size=1) +
       # scale_color_brewer(palette = "Set3") +
-      ggtitle('Lake Michigan-Huron Water Levels, 2010-2021') +
+      ggtitle('Lake Michigan-Huron Water Levels, 1980-2021') +
       ylab("Mean Lake Level (ft)") +
       scale_x_date(breaks='1 year', date_labels='%Y')+
       theme(axis.text.x=element_text(angle=60, hjust=1), plot.title=
@@ -170,90 +171,193 @@ data %>%
 
 ------------
 
-## Methods and Analysis
+## Exploratory Data Analysis
 
-### Detrending
+There is a noticeable dip in lake levels around the years 2000-2013, followed by a sharp rise; there does seem to be some evidence of a nonlinear trend. In addition, we see evidence of cyclical behavior with period ~10 years from 1980-2000 -- we will examine this more closely in the "Seasonality" section.
 
-### Spectral Analysis
+More concretely, let's look at the sample autocorrelation function (ACF) to see if our intuition is correct, and to test if a stationary time series model would be appropriate.
+
+```{r echo=FALSE}
+acf(level)
+```
+
+There is significant evidence for non-stationarity in the data! The gradual decrease in the ACF suggests that there is an systematic trend in the data, and the periodic behavior suggests that seasonality is also present. As such, we will likely want to fit a model with trend and seasonality. 
+
+### Trend 
+
+Before we examine seasonality, we will want to detrend our data. Looking at our data, anything less than a quadratic fit is likely to be underfitting, but we should be careful about overfitting as well. Therefore, we compute the AIC values for polynomial regression models of degree up to 5, where time is our  regressor. 
+
+More formally, let $t$ represent time, and let $Y_n$ be our data generating process. Then we are comparing models of the form 
+
+$$
+Y_n = \sum\limits_{j=0}^{d}\beta_j t^j,\ \ d \in [5].
+$$
+
+```{r echo=FALSE}
+library(kableExtra)
+date_num = seq(from = 1980, length = nrow(data), by = 1/12)
+level = data$MSL
+
+table=matrix(NA, 5, 1)
+for(i in 1:5) {
+  model_aic = try(
+    AIC(lm(level ~ poly(date_num, i))), 
+    silent = TRUE
+  )
+  table[i, 1] = ifelse(
+    inherits(model_aic, "try-error"), NA, model_aic
+  )
+}
+dimnames(table) = list(paste("degree ", 1:5, ': ', sep=""))
+
+# table %>%
+#   knitr::kable(
+#       format = "html", digits = 2, escape = TRUE, caption = 'AIC values'
+#   ) 
+table %>%
+  kbl(format='html', digits=2, escape=FALSE, caption='<center style=\'color:black\'><strong>AIC values</strong></center>') %>%
+  kable_styling("striped", full_width = FALSE)
+```
+
+The lowest AIC value is attained by the quartic fit; however, plotting the cubic and quartic lines of best fit indicate that they are quite close, so we will remain parsimonious and select the cubic function to model our trend.
+
+```{r echo=FALSE}
+data %>%
+ggplot(aes(Date, MSL)) +
+      theme_bw() +
+      geom_line(size=1) +
+      # scale_color_brewer(palette = "Set3") +
+      ggtitle('Lake Michigan-Huron Water Levels, 1980-2021') +
+      ylab("Mean Lake Level (ft)") +
+      scale_x_date(breaks='1 year', date_labels='%Y') +
+      theme(axis.text.x=element_text(angle=60, hjust=1), plot.title=
+            element_text(hjust=0.5)) +
+      geom_smooth(size=1, method="lm", formula=y~poly(x, 3), aes(color="cubic fit")) +
+      geom_smooth(size=1, method="lm", formula=y~poly(x, 4), aes(color="quartic fit")) +
+      scale_colour_manual(name="legend", values=c("#619CFF", "#F8766D"))
+```
+
+Looking at the model residuals, there seems to be only periodic behavior left to analyze; thus we continue with our analysis on seasonality.
+
+```{r echo=FALSE}
+date_num = seq(from = 1980, length = nrow(data), by = 1/12)
+data$residuals <- lm(level ~ poly(date_num, 5))$residuals
+data %>%
+ggplot(aes(Date, residuals)) +
+      theme_bw() +
+      geom_line(size=1) +
+      ggtitle('Residuals') +
+      ylab("residual") +
+      scale_x_date(breaks='1 year', date_labels='%Y') +
+      theme(axis.text.x=element_text(angle=60, hjust=1), plot.title=
+            element_text(hjust=0.5))
+```
+
+### Seasonality
+
+Now, let's further examine the data by decomposing the time series into trend, seasonality, and noise components. Our prior knowledge should inform us that lake levels tend to be higher in early summer and lower in winter due to increased runoff and precipitation in spring.
 
 ```{r, echo=FALSE, fig.width = 6, fig.height = 5}
-stl(ts(level, start = c(2010, 2), frequency=12), s.window = 12) %>% plot
+stl(ts(level, start = c(1980, 2), frequency=12), s.window = 'periodic', t.window=50) %>% plot(main='Decomposition Of Lake Levels')
 ```
 
 ```{r, echo=FALSE, fig.width = 6, fig.height = 5}
 # transform Date to numeric type
-date_num = seq(from = 2010 + 1/12, length = nrow(data), by = 1/12)
-
-trend = ts(loess(level ~ date_num, span = 0.5)$fitted, 
-           start = c(2010, 2), frequency = 12)
-noise = ts(level - loess(level ~ date_num, span = 0.1)$fitted, 
-           start = c(2010, 2), frequency = 12)
-cycles = level - trend - noise
-plot(ts.union(level, trend, noise, cycles),
-     main = "Decomposition of lake levels as trend + noise + cycles")
+# date_num = seq(from = 1980, length = nrow(data), by = 1/12)
+# 
+# trend = ts(loess(level ~ date_num, span = 0.5)$fitted, 
+#            start = c(1980, 2), frequency = 12)
+# noise = ts(level - loess(level ~ date_num, span = 0.1)$fitted, 
+#            start = c(1980, 2), frequency = 12)
+# cycles = level - trend - noise
+# plot(ts.union(level, trend, noise, cycles),
+#      main = "Decomposition of lake levels as trend + noise + cycles")
 ```
 
-### Model Selection
+There appears to be short-term cyclical behavior with period 1 year, which matches with our intuition. In order to identify such seasonality more concretely, let us approximate the spectral density function of the detrended data by using a smoothed periodogram to remove noise.
+
+```{r echo=FALSE}
+model <- lm(level ~ poly(date_num, 3))
+smoothed <- spectrum(model$residuals, spans=c(5, 5, 5), main="Periodogram (Smoothed)")
+
+idx_max <- which.max(smoothed$spec)
+idx_max2 <- which.max(smoothed$spec[20:length(smoothed$spec)]) + 19
+idx_max3 <- which.max(smoothed$spec[50:length(smoothed$spec)]) + 49
+
+abline(v=smoothed$freq[idx_max], lty=2, col='red')
+abline(v=smoothed$freq[idx_max2], lty=2, col='red')
+abline(v=smoothed$freq[idx_max3], lty=2, col='gray')
+
+paste0('local maximum 1: ', smoothed$freq[idx_max])
+paste0('local maximum 2: ', smoothed$freq[idx_max2])
+paste0('local maximum 3: ', smoothed$freq[idx_max3])
+```
+
+There seem to be a couple of dominant frequencies. The first is $\omega_1 = 0.01$, which corresponds to a period of $1 / 0.01 = 100$ months, or about $8.33$ years. This seems to correspond to the the longer-term variation of around 10 years as described above. However, the peak is not "sharp" and so this may simply be due to natural variation.
+
+There is also a noticeable maximum at around $\omega_2 = 0.084$, which corresponds to a much shorter period of $1 / 0.084 \approx 12$ months or $1$ year. (There is another local maximum at around $0.166$; however, this corresponds to the second harmonic of $\omega_2$, so we can ignore this.) This fits in with our domain knowledge, so we wil include this in our model fitting below.
+
+## Model Selection
+
+Given our analyses above, we find it appropriate to conduct a regression with ARMA errors, where the errors are modeled with a ???
 
 
-### Diagnostics and Goodness-of-Fit
+## Model Diagnostics
 
 [residual analysis, causality, invertibility, ...]{.comment}
 
 ```{r echo=FALSE}
-attach(data)
-
-generate_aic_table(MSL, P=5, Q=5, D=0) %>% 
-  format_aic_tables(caption = "AIC of $\\mathrm{ARMA}(p, q)$ models, $0 \\leq p, q \\leq 5$")
+# attach(data)
+# 
+# generate_aic_table(MSL, P=5, Q=5, D=0) %>% 
+#   format_aic_tables(caption = "AIC of $\\mathrm{ARMA}(p, q)$ models, $0 \\leq p, q \\leq 5$")
 ```
 
 ```{r, echo=FALSE, fig.width = 6, fig.height = 3}
-# Model 1: ARMA
-m1 = arima(level, c(5, 0, 4), method='ML')
-generate_acf_qqplot(m1)
-params = coef(m1)
-roots = list(
-  ar = polyroot(c(1, -params[grep("^ar", names(params))])),
-  ma = polyroot(c(1, params[grep("^ma", names(params))]))
-)
-lapply(roots, abs)
+# # Model 1: ARMA
+# m1 = arima(level, c(5, 0, 4), method='ML')
+# generate_acf_qqplot(m1)
+# params = coef(m1)
+# roots = list(
+#   ar = polyroot(c(1, -params[grep("^ar", names(params))])),
+#   ma = polyroot(c(1, params[grep("^ma", names(params))]))
+# )
+# lapply(roots, abs)
 ```
 
 ```{r, echo=FALSE}
-generate_aic_table(MSL, P=5, Q=5, D=1) %>%
-  format_aic_tables(caption = "AIC of $\\mathrm{ARIMA}(p, 1, q)$ models, $0 \\leq p, q \\leq 5$")
+# generate_aic_table(MSL, P=5, Q=5, D=1) %>%
+#   format_aic_tables(caption = "AIC of $\\mathrm{ARIMA}(p, 1, q)$ models, $0 \\leq p, q \\leq 5$")
 ```
 
 ```{r echo=FALSE, fig.width = 6, fig.height = 3}
 # Model 2: ARIMA
-m2 = arima(MSL, c(3, 1, 3), method='ML')
-generate_acf_qqplot(m2)
-params = coef(m2)
-roots = list(
-  ar = polyroot(c(1, -params[grep("^ar", names(params))])),
-  ma = polyroot(c(1, params[grep("^ma", names(params))]))
-)
-lapply(roots, abs)
+# m2 = arima(MSL, c(3, 1, 3), method='ML')
+# generate_acf_qqplot(m2)
+# params = coef(m2)
+# roots = list(
+#   ar = polyroot(c(1, -params[grep("^ar", names(params))])),
+#   ma = polyroot(c(1, params[grep("^ma", names(params))]))
+# )
+# lapply(roots, abs)
 ```
 
 [Similarly, we can fit SARMA models and regression models with ARMA errors ...]{.comment}
 
 ```{r, echo=FALSE, fig.width = 6, fig.height = 3}
-generate_aic_table(
-  level, P=5, Q=5, D=0,
-  seasonal = list(order = c(1, 0, 0), period = 12)
-) %>%
-  format_aic_tables(caption = "AIC of $\\mathrm{SARMA}(p, q) \\times (1, 0)_{12}$ models, $0 \\leq p, q \\leq 5$")
+# generate_aic_table(
+#   level, P=5, Q=5, D=0,
+#   seasonal = list(order = c(1, 0, 0), period = 12)
+# ) %>%
+#   format_aic_tables(caption = "AIC of $\\mathrm{SARMA}(p, q) \\times (1, 0)_{12}$ models, $0 \\leq p, q \\leq 5$")
 ```
 
 ```{r echo=FALSE, fig.width = 6, fig.height = 3}
 # Model 3: SARMA
-m3 = arima(level, c(5, 0, 0), method='ML', 
-           seasonal = list(order = c(1, 0, 0), period = 12))
-generate_acf_qqplot(m3)
+# m3 = arima(level, c(5, 0, 0), method='ML', 
+#            seasonal = list(order = c(1, 0, 0), period = 12))
+# generate_acf_qqplot(m3)
 ```
-
-
 
 ```{r echo=FALSE}
 # generate_aic_table(level, P=5, Q=5, D=0, xreg=???) %>% 
@@ -264,32 +368,36 @@ generate_acf_qqplot(m3)
 ## Model 4: Regression with ARMA errors
 # m4 = arima(level, c(5, 0, 5), method='ML', xreg=???)
 # generate_acf_qqplot(m4)
-detach(data)
+# detach(data)
 ```
 
 
 ```{r, echo=FALSE, fig.width=8, fig.height=4}
 ## plotting out fitted values
-plot(level, type = "l")
-lines(level - m1$resid, lty = 2, col = "red")
-lines(level - m2$resid, lty = 2, col = "green")
-lines(level - m3$resid, lty = 2, col = "blue")
-title(main='Fitted Values of Models 1, 2, and 3')
-legend(
-  "topleft",
-  legend = c("Original data", "Model 1", "Model 2", "Model 3"), 
-  col = c("black", "red", "green", "blue"), 
-  lty = c(1, 2, 2, 2),
-  bty = "n", horiz = FALSE, ncol = 2, cex = 1
-)
+# plot(level, type = "l")
+# lines(level - m1$resid, lty = 2, col = "red")
+# lines(level - m2$resid, lty = 2, col = "green")
+# lines(level - m3$resid, lty = 2, col = "blue")
+# title(main='Fitted Values of Models 1, 2, and 3')
+# legend(
+#   "topleft",
+#   legend = c("Original data", "Model 1", "Model 2", "Model 3"), 
+#   col = c("black", "red", "green", "blue"), 
+#   lty = c(1, 2, 2, 2),
+#   bty = "n", horiz = FALSE, ncol = 2, cex = 1
+# )
 ```
 
+------------
 
-## "Extension" (Part 3)
+## Cross-Comparison
 
 
 ------------
 
+## Limitations
+
+------------
 
 ## Conclusion
 
@@ -298,10 +406,12 @@ legend(
 
 ## References  
 
-1. https://tidesandcurrents.noaa.gov/waterlevels.html?id=9075014&type=Tide+Data&name=Harbor%20Beach&state=MI (data!)
+- https://tidesandcurrents.noaa.gov/waterlevels.html
+(data!)
 
-1. https://www.epa.gov/greatlakes/facts-and-figures-about-great-lakes 
+- https://www.epa.gov/greatlakes/facts-and-figures-about-great-lakes 
 
-1. https://en.wikipedia.org/wiki/Lake_Michigan%E2%80%93Huron
+- https://en.wikipedia.org/wiki/Lake_Michigan%E2%80%93Huron
 
+- https://www.watershedcouncil.org/great-lakes-water-levels.html
 
