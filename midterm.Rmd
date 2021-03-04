@@ -40,6 +40,7 @@ pre { /* Scrollable code block */
   color: Darkred;
   border-left-style: solid;
   border-color: #f2f2f2;
+  font-weight: 600;
 }
 ```
 
@@ -92,11 +93,13 @@ generate_acf_qqplot = function(model) {
 
 ## Outline
 
+[Q: Do we want to drop the observation in January 2021?]{.comment}
+
 [DELETE THIS WHEN FINISHED!]{.comment}
 
 - 1) [Eric - **DONE**] introduction and motivation
 
-- 2) [Eric - **check this**] plot the data, describe the data
+- 2) [Yanyu - **DONE**] plot the data, describe the data
 
 - 3) fitting an ARMA model
   - [Eric - **DONE**] check for a trend
@@ -117,7 +120,7 @@ generate_acf_qqplot = function(model) {
   
 - 4) [Eric] investigate how other lakes can act as predictor for Lake Michigan
   - motivation: is there a lag in the warmer lake (Erie) that can be used for prediction? Warmer lakes may be more susceptible to climactic changes
-  - plot the data, describe the data
+  - [Yanyu - **DONE(?)**] plot the data, describe the data
   - cross-spectrum, cross-correlation, coherency
   - linear regression with ARMA errors 
     - goodness of fit analysis, likelihood-ratio tests, etc.
@@ -143,30 +146,39 @@ In this project, we consider the variation of water levels in Lake Michigan-Huro
 
 ## Data
 
-The data consists of monthly lake level means and was collected by the [Center for Operational Oceanographic Products and Services](https://tidesandcurrents.noaa.gov/map/index.html?region=Lake%20Michigan) (CO-OPS), an arm of the National Oceanic and Atmospheric Administration (NOAA). We plot the data below.
+The data consists of monthly lake level means and was collected by the [Center for Operational Oceanographic Products and Services](https://tidesandcurrents.noaa.gov/map/index.html?region=Lake%20Michigan) (CO-OPS), an arm of the National Oceanic and Atmospheric Administration (NOAA).  
+
+From the time plot below, we can see that the water levels had two noticeable peaks in October 1986 and July 1997, hit bottom in 2013, and have been steadily rising since then. 
 
 
 ```{r echo=FALSE}
 ## reading in and formatting data
-data = read.csv('michigan_huron.csv', colClasses = list(Date = "Date")) %>%
-  rename_with(~ str_extract(.x, "([[:alpha:]]+)")) # get rid of `.` in colnames
-attach(data)
-level = data$MSL
-date = data$Date
+data_huron = read.csv('michigan_huron.csv', colClasses = list(Date = "Date")) %>%
+  rename_with(~ str_extract(.x, "([[:alpha:]]+)")) %>% # get rid of `.` in colnames
+  select(Date, MSL)
+level = data_huron$MSL
 ```
 
 
 ```{r, echo=FALSE, fig.width=8, fig.height=4}
-data %>%
+date_breaks = with(data_huron, seq.Date(from = min(Date), to = max(Date), by = '5 years'))
+
+peak_trough = rbind(
+  data_huron %>% filter(Date<as.Date("1990-01-01")) %>% filter(MSL==max(MSL)),
+  data_huron %>% filter(Date>as.Date("1990-01-01"), Date<as.Date("2000-01-01")) %>% filter(MSL==max(MSL)),
+  data_huron %>% filter(Date>as.Date("2010-01-01")) %>% filter(MSL==min(MSL))
+)
+
+data_huron %>%
   ggplot(aes(Date, MSL)) + 
-      theme_bw() +
-      geom_line(color="#69b3a2", size=1) +
-      # scale_color_brewer(palette = "Set3") +
-      ggtitle('Lake Michigan-Huron Water Levels, 1980-2021') +
-      ylab("Mean Lake Level (ft)") +
-      scale_x_date(breaks='1 year', date_labels='%Y')+
-      theme(axis.text.x=element_text(angle=60, hjust=1), plot.title=
-            element_text(hjust=0.5)) 
+    theme_bw() +
+    geom_line(color="#69b3a2", size=1) +
+    ylab("Mean Lake Level (ft)") +
+    ggtitle('Lake Michigan-Huron Water Levels, 1980-2021') +
+    scale_x_date(breaks=date_breaks, date_labels='%Y') +
+    geom_vline(data=peak_trough, aes(xintercept=Date), 
+               color="darkred", linetype="dashed", alpha=.4) +
+    theme(plot.title=element_text(hjust=0.5))
 ```
 
 ------------
@@ -177,7 +189,7 @@ There is a noticeable dip in lake levels around the years 2000-2013, followed by
 
 More concretely, let's look at the sample autocorrelation function (ACF) to see if our intuition is correct, and to test if a stationary time series model would be appropriate.
 
-```{r echo=FALSE}
+```{r, echo=FALSE, fig.width=5, fig.height=3.5}
 acf(level)
 ```
 
@@ -195,8 +207,7 @@ $$
 
 ```{r echo=FALSE}
 library(kableExtra)
-date_num = seq(from = 1980, length = nrow(data), by = 1/12)
-level = data$MSL
+date_num = seq(from = 1980, length = nrow(data_huron), by = 1/12)
 
 table=matrix(NA, 5, 1)
 for(i in 1:5) {
@@ -221,36 +232,35 @@ table %>%
 
 The lowest AIC value is attained by the quartic fit; however, plotting the cubic and quartic lines of best fit indicate that they are quite close, so we will remain parsimonious and select the cubic function to model our trend.
 
-```{r echo=FALSE}
-data %>%
-ggplot(aes(Date, MSL)) +
-      theme_bw() +
-      geom_line(size=1) +
-      # scale_color_brewer(palette = "Set3") +
-      ggtitle('Lake Michigan-Huron Water Levels, 1980-2021') +
-      ylab("Mean Lake Level (ft)") +
-      scale_x_date(breaks='1 year', date_labels='%Y') +
-      theme(axis.text.x=element_text(angle=60, hjust=1), plot.title=
-            element_text(hjust=0.5)) +
-      geom_smooth(size=1, method="lm", formula=y~poly(x, 3), aes(color="cubic fit")) +
-      geom_smooth(size=1, method="lm", formula=y~poly(x, 4), aes(color="quartic fit")) +
-      scale_colour_manual(name="legend", values=c("#619CFF", "#F8766D"))
+```{r echo=FALSE, fig.width=8, fig.height=4}
+data_huron %>%
+  ggplot(aes(Date, MSL)) +
+    theme_bw() +
+    geom_line(color="#69b3a2", size=1) +
+    ggtitle('Lake Michigan-Huron Water Levels, 1980-2021') +
+    ylab("Mean Lake Level (ft)") +
+    scale_x_date(breaks=date_breaks, date_labels='%Y') +
+    geom_smooth(size=1, method="lm", formula=y~poly(x, 3), 
+                aes(color="cubic fit", fill="cubic fit")) +
+    geom_smooth(size=1, method="lm", formula=y~poly(x, 4), 
+                aes(color="quartic fit", fill="quartic fit")) +
+    scale_colour_manual(name="Fitted values", values=c("#96BCFF", "#FC948D")) +
+    scale_fill_manual(name="Fitted values", values=c("#96BCFF", "#FC948D")) +
+    theme(plot.title=element_text(hjust=0.5))
 ```
 
 Looking at the model residuals, there seems to be only periodic behavior left to analyze; thus we continue with our analysis on seasonality.
 
-```{r echo=FALSE}
-date_num = seq(from = 1980, length = nrow(data), by = 1/12)
-data$residuals <- lm(level ~ poly(date_num, 5))$residuals
-data %>%
-ggplot(aes(Date, residuals)) +
-      theme_bw() +
-      geom_line(size=1) +
-      ggtitle('Residuals') +
-      ylab("residual") +
-      scale_x_date(breaks='1 year', date_labels='%Y') +
-      theme(axis.text.x=element_text(angle=60, hjust=1), plot.title=
-            element_text(hjust=0.5))
+```{r echo=FALSE, fig.width=6, fig.height=4}
+date_num = seq(from = 1980, length = nrow(data_huron), by = 1/12)
+data_huron %>%
+  mutate(Residuals = lm(level ~ poly(date_num, 5))$residuals) %>%
+  ggplot(aes(Date, Residuals)) +
+    theme_bw() +
+    geom_line(size=1, color="#69b3a2") +
+    ggtitle('Residuals') +
+    scale_x_date(breaks=date_breaks, date_labels='%Y') +
+    theme(plot.title=element_text(hjust=0.5))
 ```
 
 ### Seasonality
@@ -261,22 +271,9 @@ Now, let's further examine the data by decomposing the time series into trend, s
 stl(ts(level, start = c(1980, 2), frequency=12), s.window = 'periodic', t.window=50) %>% plot(main='Decomposition Of Lake Levels')
 ```
 
-```{r, echo=FALSE, fig.width = 6, fig.height = 5}
-# transform Date to numeric type
-# date_num = seq(from = 1980, length = nrow(data), by = 1/12)
-# 
-# trend = ts(loess(level ~ date_num, span = 0.5)$fitted, 
-#            start = c(1980, 2), frequency = 12)
-# noise = ts(level - loess(level ~ date_num, span = 0.1)$fitted, 
-#            start = c(1980, 2), frequency = 12)
-# cycles = level - trend - noise
-# plot(ts.union(level, trend, noise, cycles),
-#      main = "Decomposition of lake levels as trend + noise + cycles")
-```
-
 There appears to be short-term cyclical behavior with period 1 year, which matches with our intuition. In order to identify such seasonality more concretely, let us approximate the spectral density function of the detrended data by using a smoothed periodogram to remove noise.
 
-```{r echo=FALSE}
+```{r, echo=FALSE, fig.width=6, fig.height=4}
 model <- lm(level ~ poly(date_num, 3))
 smoothed <- spectrum(model$residuals, spans=c(5, 5, 5), main="Periodogram (Smoothed)")
 
@@ -307,9 +304,9 @@ Given our analyses above, we find it appropriate to conduct a regression with AR
 [residual analysis, causality, invertibility, ...]{.comment}
 
 ```{r echo=FALSE}
-# attach(data)
+# attach(data_huron)
 # 
-# generate_aic_table(MSL, P=5, Q=5, D=0) %>% 
+# generate_aic_table(level, P=5, Q=5, D=0) %>% 
 #   format_aic_tables(caption = "AIC of $\\mathrm{ARMA}(p, q)$ models, $0 \\leq p, q \\leq 5$")
 ```
 
@@ -326,13 +323,13 @@ Given our analyses above, we find it appropriate to conduct a regression with AR
 ```
 
 ```{r, echo=FALSE}
-# generate_aic_table(MSL, P=5, Q=5, D=1) %>%
+# generate_aic_table(level, P=5, Q=5, D=1) %>%
 #   format_aic_tables(caption = "AIC of $\\mathrm{ARIMA}(p, 1, q)$ models, $0 \\leq p, q \\leq 5$")
 ```
 
 ```{r echo=FALSE, fig.width = 6, fig.height = 3}
 # Model 2: ARIMA
-# m2 = arima(MSL, c(3, 1, 3), method='ML')
+# m2 = arima(level, c(3, 1, 3), method='ML')
 # generate_acf_qqplot(m2)
 # params = coef(m2)
 # roots = list(
@@ -368,7 +365,7 @@ Given our analyses above, we find it appropriate to conduct a regression with AR
 ## Model 4: Regression with ARMA errors
 # m4 = arima(level, c(5, 0, 5), method='ML', xreg=???)
 # generate_acf_qqplot(m4)
-# detach(data)
+# detach(data_huron)
 ```
 
 
@@ -390,7 +387,57 @@ Given our analyses above, we find it appropriate to conduct a regression with AR
 
 ------------
 
-## Cross-Comparison
+## Cross-Comparison  
+
+[Need some transitional sentences here. ]{.comment}  
+
+[Below is the EDA of Lake Erie's data. Feel free to use/drop them however you see fit. ]{.comment}
+
+```{r, echo=FALSE}
+data_erie = read.csv("erie.csv", colClasses = list(Date = "Date")) %>%
+  rename_with(~ str_extract(.x, "([[:alpha:]]+)")) %>% # get rid of `.` in colnames
+  select(c("Date", "MSL"))
+```
+
+The water levels of Lake Erie peaked in June 1986 and June 1997, and has presented a steady upward trend since 2010. 
+
+```{r, echo=FALSE, fig.width=8, fig.height=3.5}
+peak_trough = rbind(
+  data_erie %>% filter(Date<as.Date("1990-01-01")) %>% filter(MSL==max(MSL)),
+  data_erie %>% filter(Date>as.Date("1990-01-01"), Date<as.Date("2000-01-01")) %>% filter(MSL==max(MSL)),
+  data_erie %>% filter(Date>as.Date("2010-01-01")) %>% filter(MSL==min(MSL))
+)
+
+data_erie %>%
+  ggplot(aes(Date, MSL)) + 
+    theme_bw() +
+    geom_line(color="#69b3a2", size=1) +
+    ylab("Mean Lake Level (ft)") +
+    ggtitle("Lake Erie Water Levels, 1980-2021") +
+    scale_x_date(breaks=date_breaks, date_labels='%Y') +
+    geom_vline(data=peak_trough, aes(xintercept=Date), 
+               color="darkred", linetype="dashed", alpha=.4) +
+    theme(plot.title=element_text(hjust=0.5))
+```
+
+Plotting the centered water levels of Lake Erie and lake Michigan-Huron together, we can see that the two sets of data present a similar overall trend. 
+
+```{r, echo=FALSE, fig.width=8, fig.height=3.5}
+ggplot() + 
+  theme_bw() +
+  geom_line(data=data_erie, 
+            aes(Date, MSL-mean(MSL, na.rm=T), alpha="Erie"), 
+            color="#69b3a2", size=1) +
+  geom_line(data=data_huron, 
+            aes(Date, MSL-mean(MSL, na.rm=T), alpha="Michigan-Huron"),
+            color="#69b3a2", size=1) +
+  ylab("Centered Mean Lake Level (ft)") +
+  ggtitle("Centered water levels of Lake Erie and Lake Michigan-Huron") +
+  scale_x_date(breaks=date_breaks, date_labels='%Y') +
+  scale_alpha_manual(name="Lake", values = c("Michigan-Huron" = 0.4, "Erie" = 1)) +
+  theme(legend.position="bottom", legend.margin=margin(-10),
+        plot.title=element_text(hjust=0.5))
+```
 
 
 ------------
