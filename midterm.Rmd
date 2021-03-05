@@ -9,8 +9,6 @@ output:
 subtitle: STATS 531 Midterm Project (W21)
 ---
 
-------------
-
 ```{r setup, include=FALSE}
 knitr::opts_chunk$set(
 	echo = FALSE,
@@ -24,15 +22,8 @@ knitr::opts_chunk$set(
 
 
 ```{css, include = TRUE, echo = FALSE}
-body{ /* Normal */
-  font-size: 15px;
-}
 span.math{ /* Formulas */
   font-size: 14px;
-}
-pre { /* Scrollable code block */
-  max-height: 250px;
-  overflow-y: auto;
 }
 .comment { /* Comments, to be deleted later */
   margin: 30px;
@@ -92,12 +83,7 @@ generate_acf_qqplot = function(model) {
 }
 ```
 
-[DELETE THIS WHEN FINISHED!]{.comment}
-
-[**TODO:**]{.comment}
-
-- [Model Comparison] [profile log-likelihood?]{.comment}
-- [Model Comparison] [unit roots? -- investigate instability, model fit]{.comment}
+[TODO: (1) Check the interpretation of the CCF plot and the analysis following the centered water level plot; (2) I am not sure what the symbol `**` in the introduction means, or the $d\in[5]$ in the Trend section. Feel free to keep them as long as they are not typos. ]{.comment}
 
 ------------
 
@@ -121,7 +107,8 @@ The data consists of monthly lake level means from Harbor Beach, MI and was coll
 ## reading in and formatting data
 data_huron = read.csv('michigan_huron.csv', colClasses = list(Date = "Date")) %>%
   rename_with(~ str_extract(.x, "([[:alpha:]]+)")) %>% # get rid of `.` in colnames
-  select(Date, MSL)
+  select(Date, MSL) %>% 
+  filter(Date < as.Date("2021-01-01"))
 level = data_huron$MSL
 ```
 
@@ -289,30 +276,9 @@ $$
 
 ## Model Diagnostics
 
-```{r, echo=FALSE, eval=FALSE}
-# generate_aic_table(level, P=5, Q=5, D=0, xreg = poly(date_num, 3)) %>%
-#   format_aic_tables(caption = "AIC of $\\mathrm{ARMA}(p, q)$ models, $0 \\leq p, q \\leq 5$")
-```
+We start by choosing an appropriate SARMA model, again using AIC as a comparison metric. To keep the model relatively simple, we limit the seasonal AR and MA factors $(P,Q)$ to $\{(0,0), (1,0), (0,1), (1,1)\}$, and find that $(P, Q) = (1, 1)$ has much lower AIC values than the other three pairs. 
 
-```{r, echo=FALSE, eval=FALSE}
-# generate_aic_table(
-#   level, P=5, Q=5, D=0, xreg = poly(date_num, 3),
-#   seasonal = list(order = c(1, 0, 0), period = 12)
-# ) %>%
-#   format_aic_tables(caption = "AIC of $\\mathrm{SARMA}(p, q) \\times (1, 0)_{12}$ models, $0 \\leq p, q \\leq 5$")
-```
-
-```{r, echo=FALSE, eval=FALSE}
-# generate_aic_table(
-#   level, P=5, Q=5, D=0, xreg = poly(date_num, 3),
-#   seasonal = list(order = c(0, 0, 1), period = 12)
-# ) %>%
-#   format_aic_tables(caption = "AIC of $\\mathrm{SARMA}(p, q) \\times (0, 1)_{12}$ models, $0 \\leq p, q \\leq 5$")
-```
-
-We start by choosing an appropriate SARMA model, again using AIC as a comparison metric.
-
-```{r, echo=FALSE, cache=TRUE}
+```{r, echo=FALSE}
 generate_aic_table(
   level, P=5, Q=5, D=0, xreg = poly(date_num, 3),
   seasonal = list(order = c(1, 0, 1), period = 12)
@@ -320,7 +286,7 @@ generate_aic_table(
   format_aic_tables(caption = '<center style=\'color:black\'><strong>AIC of $\\mathrm{SARMA}(p, q) \\times (1, 1)_{12}$ models, $0 \\leq p, q \\leq 5$</strong></center>')
 ```
 
-Although the lowest AIC is given by the $\mathrm{SARMA}(5,2)\times(1,1)_{12}$ model, the $\mathrm{SARMA}(3,0)\times(1,1)_{12}$ and $\mathrm{SARMA}(2,0)\times(1,1)_{12}$ models have very similar performance and fewer parameters. Therefore, we will consider the two simpler models in the following analysis. 
+Although the lowest AIC is given by the $\mathrm{SARMA}(5,2)\times(1,1)_{12}$ model, $\mathrm{SARMA}(3,0)\times(1,1)_{12}$ and $\mathrm{SARMA}(2,0)\times(1,1)_{12}$ have very similar performance and fewer parameters. Therefore, we will consider the two simpler models in the following analysis. 
 
 ```{r echo=FALSE}
 m30_11 = arima(level, c(3, 0, 0), xreg = poly(date_num, 3), 
@@ -332,7 +298,8 @@ m20_11 = arima(level, c(2, 0, 0), xreg = poly(date_num, 3),
 
 ### Residual Analysis
 
-We analyze the fit by investigating the distribution of the residuals.
+We analyze the fit by investigating the distribution of the residuals. 
+The residuals of both models show no striking patterns or significant signs of autocorrelation, and look to be normally distributed, suggesting that both models have fit the data relatively well. 
 
 #### Residuals of the $\mathrm{SARMA}(3, 0) \times (1, 1)_{12}$ model
 
@@ -349,10 +316,20 @@ data_huron %>%
 
 ```{r echo=FALSE, fig.width = 6, fig.height = 3}
 generate_acf_qqplot(m30_11)
-#! TODO: add unit root test
 ```
 
-[TODO: Add unit root test]{.comment}  
+To check for causality and invertibility of the $\mathrm{SARMA}(3, 0) \times (1, 1)_{12}$ model, we compute the roots of the AR polynomial $\phi(x)\Phi(x^{12}) = (1-1.329x+0.257x^2+0.099x^3)(1-0.999x^{12})$ and MA polynomial $\Psi(x^{12}) = 1-0.965x^{12}$. The results suggest that all roots fall outside the unit circle, which means our model is both stationary and invertible. 
+
+```{r}
+# unit root test
+params30_11 = m30_11$coef
+roots = list(
+  ar_nonseasonal = polyroot(c(1, -params30_11[grep("^ar", names(params30_11))])),
+  ar_seasonal = polyroot(c(1, -params30_11["sar1"])),
+  ma_seasonal = polyroot(c(1, params30_11["sma1"]))
+)
+lapply(roots, abs)
+```
 
 #### Residuals of the $\mathrm{SARMA}(2, 0) \times (1, 1)_{12}$ model
 
@@ -369,19 +346,25 @@ data_huron %>%
 
 ```{r echo=FALSE, fig.width = 6, fig.height = 3}
 generate_acf_qqplot(m20_11)
-params = m20_11$coef
-#! TODO: add unit root test
 ```
 
-[TODO: Add unit root test]{.comment}  
+Again, we compute the roots of the AR polynomial $\phi(x)\Phi(x^{12}) = (1-1.369x+0.394x^2)(1-x^{12})$ and MA polynomial $\Psi(x^{12}) = 1-0.974x^{12}$. All roots are outside the unit circle, indicating that the model is both stationary and invertible. 
 
-The residuals of both models show no striking patterns or significant signs of autocorrelation, and look to be normally distributed, suggesting that both models have fit the data relatively well. 
+```{r}
+# unit root test
+params20_11 = m20_11$coef
+roots = list(
+  ar_nonseasonal = polyroot(c(1, -params20_11[grep("^ar", names(params20_11))])),
+  ar_seasonal = polyroot(c(1, -params20_11["sar1"])),
+  ma_seasonal = polyroot(c(1, params20_11["sma1"]))
+)
+lapply(roots, abs)
+```
+
 
 ### Model Comparison
 
-Comparing the estimated coefficients of the two models, we can see that the `ar3` estimate is close to zero and on the edge of statistical significance as measured by the Fisher information. This motivates us to conduct a profile likelihood estimation to further check the confidence interval. 
-
-[TODO: take the profile log-likelihood part out?]{.comment}
+Comparing the estimated coefficients of the two models, we can see that the `ar3` estimate is close to zero and on the edge of statistical significance as measured by the Fisher information. This motivates us to conduct a formal hypothesis test using Wilks' approximation. 
 
 ```{r}
 tibble(
@@ -394,52 +377,50 @@ tibble(
       est = sprintf("%4.3f (%4.3f)", m20_11$coef, sqrt(diag(m20_11$var.coef)))
     )
   ) %>%
-  pivot_wider(id_cols = Term, names_from = model, values_from = est) %>%
-  knitr::kable(caption = "<center style=\'color:black\'><strong>Coefficient Estimates (S.E.)</strong></style>") %>%
+  pivot_wider(id_cols = Term, names_from = model, values_from = est, values_fill = list(est = "")) %>%
+  mutate(Term = ifelse(Term %in% c("1", "2", "3"), sprintf("$\\mathrm{t}^%s$", Term), Term)) %>%
+  knitr::kable(caption = "<center style=\'color:black\'><strong>Coefficient Estimates (S.E.)</strong></style>", escape = TRUE) %>%
   kable_styling(bootstrap_options = "striped", full_width = FALSE)
 ```
 
 
-[Profile log likelihood does not work well (too many NA values)]{.comment}  
+```{r, eval=FALSE, fig.width=6, fig.height=3}
+# Profile log-likelihood test. Setting `eval=FALSE` will skip the evaluation
+K = 100
+ar3 = seq(-0.8, -0.01, length.out = K)
+profile_loglik = numeric(K)
+xreg = poly(date_num, 3)
+for (k in 1:K) {
+  loglik_k = try(
+    logLik(
+      arima(level, c(3, 0, 0), xreg = xreg,
+            seasonal = list(order = c(1, 0, 1), period = 12), method='ML',
+            fixed = c(NA, NA, ar3[k], NA, NA, NA, NA, NA, NA))
+    ), silent = TRUE
+  )
+  profile_loglik[k] = ifelse(inherits(loglik_k, "try-error"), NA, loglik_k)
+}
 
-```{r, cache=TRUE}
-# K = 100
-# ar3 = seq(-0.8, -0.01, length.out = K)
-# profile_loglik = numeric(K)
-# for (k in 1:K) {
-#   loglik_k = try(
-#     logLik(
-#       arima(level, c(3, 0, 0), xreg = poly(date_num, 3), 
-#             seasonal = list(order = c(1, 0, 1), period = 12), method='ML',
-#             fixed = c(NA, NA, ar3[k], NA, NA, NA, NA, NA, NA))
-#     ), silent = TRUE
-#   )
-#   profile_loglik[k] = ifelse(inherits(loglik_k, "try-error"), NA, loglik_k)
-# }
+plot(profile_loglik ~ ar3, type = "l")
 ```
 
-```{r, fig.width=6, fig.height=3}
-# profile_loglik %>% is.na() %>% sum()
-# profile_loglik %>% range(na.rm = TRUE)
-# plot(profile_loglik ~ ar3, type = "l")
-```
-
-Finally, we will conduct a likelihood ratio test using Wilks' approximation, with the null hypothesis $H_{0}$ corresponding to the $\mathrm{SARMA}(2, 0)\times(1, 1)_{12}$ model, and the alternative hypothesis $H_{1}$ corresponding to the $\mathrm{SARMA}(3, 0)\times(1, 1)_{12}$ model. Recall that Wilks' Theorem states that $\Lambda = -2(\ell_0 - \ell_1) \sim \chi^2_\nu$, where $\nu$ is the difference in degrees of freedom between the two models. In this case, $\nu = 1$.
+For this test, the null hypothesis $H_{0}$ corresponds to the $\mathrm{SARMA}(2, 0)\times(1, 1)_{12}$ model, and the alternative hypothesis $H_{1}$ corresponds to the $\mathrm{SARMA}(3, 0)\times(1, 1)_{12}$ model. Recall that Wilks' Theorem states that $\Lambda = -2(\ell_0 - \ell_1) \sim \chi^2_\nu$, where $\nu$ is the difference in degrees of freedom between the two models. In this case, $\nu = 1$.
 
 The difference in the log likelihood is $\Lambda \approx `r sprintf("%4.3f", -2 *(m20_11$loglik - m30_11$loglik))` > `r sprintf("%4.3f", qchisq(0.95, df = 1))`$. Therefore, we can reject $H_{0}$ at the 5% confidence level - the $\mathrm{SARMA}(3, 0)\times(1, 1)_{12}$ model is more appropriate for the data.
 
 We make a final plot to show the fit of our model against the data.
 
-```{r echo=FALSE}
+```{r, echo=FALSE, fig.width=8, fig.height=3}
 data_huron %>%
   mutate(fit = MSL - m30_11$residuals) %>%
   ggplot() + 
     theme_bw() +
-    geom_line(aes(Date, MSL), color="#69b3a2", size=1) +
-    geom_line(aes(Date, fit), color='purple', lty=2, size=0.7) +
+    geom_line(aes(Date, MSL, color="Original data"), size=1, alpha=0.5) +
+    geom_line(aes(Date, fit, color="Fitted values"), lty=2, size=0.7) +
     ylab("Mean Lake Level (ft)") +
     ggtitle('Lake Michigan-Huron Water Levels, 1980-2020') +
     scale_x_date(breaks=date_breaks, date_labels='%Y') +
+    scale_color_manual(name="", values=c("Original data"="#69b3a2", "Fitted values"="purple")) +
     theme(plot.title=element_text(hjust=0.5))
 ```
 
@@ -452,7 +433,8 @@ We may also be interested in investigating how the water levels in one lake corr
 ```{r, echo=FALSE}
 data_erie = read.csv("erie.csv", colClasses = list(Date = "Date")) %>%
   rename_with(~ str_extract(.x, "([[:alpha:]]+)")) %>% # get rid of `.` in colnames
-  select(c("Date", "MSL"))
+  select(c("Date", "MSL")) %>% 
+  filter(Date < as.Date("2021-01-01"))
 ```
 
 First, we plot the data from Lake Erie. The water levels of Lake Erie peaked in June 1986 and June 1997, and has presented a steady upward trend since 2010. 
@@ -495,17 +477,29 @@ ggplot() +
         plot.title=element_text(hjust=0.5))
 ```
 
+
+[The paragraph below may not be accurate: The plot presents the centered data; if we compare the original data, Lake Michigan-Huron's water level has always been higher than Lake Erie's. ]{.comment}
+
 We see that Lake Erie's water levels were relatively lower than Lake Michigan's in the 1980s, relatively higher than Lake Michigan's in the 2000s, and has since caught up. The reason for this is unknown.
 
 Let us also compare the two series by investigating the cross-correlation function (CCF); if there is a noticeable pattern, it may be worth analyzing further.
 
-```{r echo=FALSE}
+```{r, echo=FALSE, fig.width=6, fig.height=3.5}
 ccf(data_huron$MSL, data_erie$MSL, main="sample CCF")
+```
+
+
+[The maximum value should correspond to lag 1?]{.comment}
+
+```{r, echo=TRUE}
+# TODO: delete this later!
+ccf_val = ccf(data_huron$MSL, data_erie$MSL, plot = FALSE)
+ccf_val$lag[which.max(ccf_val$acf)]
 ```
 
 The cross-correlations are clearly significant at each of these lags, reaching a maximum at lag 0, supporting the assertion that these lake levels vary together. The plot also shows an oscillatory pattern, motivating further investigation in the frequency domain. Let's take a look at the coherency between the two time series -- specifically, we hope to analyze the phase plot to check whether or not the trend in one lake lags the other.
 
-```{r echo=FALSE}
+```{r, echo=FALSE, fig.width=6, fig.height=4}
 s <- spectrum(cbind(data_huron$MSL,data_erie$MSL), spans=c(10,15,10), plot=F)
 plot(s, plot.type="phase", main="Phase Plot of Erie-Michigan Coherency")
 ```
@@ -530,7 +524,7 @@ While Lake Michigan water levels have increased in the past 10 years, the Lake's
 
 ## Limitations
 
-We ran into numerical stability problems on occasion where our model fitting algorithm did not converge. This gives us evidence that some of our model choices were not entirely well-specified. This is supported by the generated AIC tables, since the AIC would increase by much more than 2 when only adding one parameter. A more careful analysis may be of use, especially one that verifies our assumptions with bootstrapping.
+We ran into numerical stability problems on occasion where our model fitting algorithm did not converge, especially when the model specification gets more complex. This gives us evidence that some of our model choices were not entirely well-specified. This is supported by the generated AIC tables, since the AIC would increase by much more than 2 when only adding one parameter. A more careful analysis may be of use, especially one that verifies our assumptions with bootstrapping.
 
 In addition, the cubic fit does not correspond to the data very well; it is likely that a nonparametric smoothing method could have worked better. This is a more general concern throughout this project; although we emphasized simplicity, it is possible that a more complicated model could have fit the data more accurately.
 
