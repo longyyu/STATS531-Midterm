@@ -83,19 +83,25 @@ generate_acf_qqplot = function(model) {
 }
 ```
 
-[TODO: (1) Check the interpretation of the CCF plot and the analysis following the centered water level plot; (2) I am not sure what the symbol `**` in the introduction means, or the $d\in[5]$ in the Trend section. Feel free to keep them as long as they are not typos. ]{.comment}
-
 ------------
 
 ## Introduction
 
 The Great Lakes are a major source of water, recreation, and industry for over 30 million people, including most Michigan residents. However, in recent years, there has been a growing concern over steadily rising water levels: local and national news sources such as the Green Bay Press-Gazette [[1](https://www.greenbaypressgazette.com/story/news/local/oconto-county/2020/08/04/lake-michigan-breaks-34-year-old-high-water-record/3294377001/)], the Detroit Free Press [[2](https://www.freep.com/story/news/local/michigan/2020/07/17/great-lakes-water-levels-records-erosion-damage/5450910002/)], and The Washington Post [[3](https://www.washingtonpost.com/weather/2019/11/08/great-lakes-water-levels-have-swung-record-lows-record-highs-heres-why/)] have reported on the resulting property damage, shoreline erosion, and economic disruption. As such, environmental scientists have been investigating the potential causes and implications of high water in the Great Lakes, tying this into the larger conversation about climate change [[4](https://www.watershedcouncil.org/great-lakes-water-levels.html)]. 
 
-In this project, we consider the variation of water levels in Lake Michigan-Huron over the time period 1980-2020, given that the majority of residents in the Great Lakes watershed live by Lake Michigan [[4](https://www.watershedcouncil.org/great-lakes-water-levels.html), [5](https://en.wikipedia.org/wiki/Lake_Michigan%E2%80%93Huron)]. Our goal is to (1) identify if there is a general trend** that could explain the noticeable increase in water levels in the past 10 years, and to (2) describe any other patterns** that may be of interest to environmental scientists and climatologists. In addition, we may want to (3) study how the water levels in one lake may be associated with the water levels in another lake for prediction purposes; thus, we will cross-compare water levels between Lake Michigan and Lake Erie.
+In this project, we consider the variation of water levels in Lake Michigan-Huron over the time period 1980-2020, given that the majority of residents in the Great Lakes watershed live by Lake Michigan [[4](https://www.watershedcouncil.org/great-lakes-water-levels.html), [5](https://en.wikipedia.org/wiki/Lake_Michigan%E2%80%93Huron)]. Our goals are as follows: 
+
+(1) Identify if there is a general trend that could explain the noticeable increase in water levels in the past 10 years.
+
+(2) Describe any other patterns that may be of interest to environmental scientists and climatologists. 
+
+In addition, we may want to study how the water levels in one lake may be associated with the water levels in another lake for prediction purposes; thus, we will cross-compare water levels between Lake Michigan and Lake Erie. Our goal is then to:
+
+(3) Describe the temporal relationship between water levels in Lake Michigan and Lake Erie.
 
 ----
 
-**NB**: Lake Michigan and Lake Huron are hydrologically one lake [[5](https://en.wikipedia.org/wiki/Lake_Michigan%E2%80%93Huron)], since the flow of water through the Straits of Mackinac keeps their respective water levels in near-equilibrium. 
+**NB**: Lake Michigan and Lake Huron are hydrologically one lake [[5](https://en.wikipedia.org/wiki/Lake_Michigan%E2%80%93Huron)], since the flow of water through the Straits of Mackinac keeps their respective water levels in near-equilibrium. In this project, we will use the names Lake Michigan and Lake Michigan-Huron interchangeably.
 
 ------------
 
@@ -178,7 +184,7 @@ for(i in 1:5) {
 }
 dimnames(table) = list(paste("degree ", 1:5, ': ', sep=""))
 
-table %>%
+table %>% # kbl(f
   kbl(format='html', digits=2, escape=FALSE, caption='<center style=\'color:black\'><strong>AIC values</strong></center>') %>%
   kable_styling("striped", full_width = FALSE)
 ```
@@ -276,7 +282,7 @@ $$
 
 ## Model Diagnostics
 
-We start by choosing an appropriate SARMA model, again using AIC as a comparison metric. To keep the model relatively simple, we limit the seasonal AR and MA factors $(P,Q)$ to $\{(0,0), (1,0), (0,1), (1,1)\}$, and find that $(P, Q) = (1, 1)$ has much lower AIC values than the other three pairs. 
+We start by choosing an appropriate SARMA model, again using AIC as a comparison metric. To keep the model relatively simple, we limit the seasonal AR and MA factors $(P,Q)$ to $\{(0,0), (1,0), (0,1), (1,1)\}$, and find that $(P, Q) = (1, 1)$ has a much lower AIC value than the other three pairs. 
 
 ```{r, echo=FALSE}
 generate_aic_table(
@@ -318,7 +324,7 @@ data_huron %>%
 generate_acf_qqplot(m30_11)
 ```
 
-To check for causality and invertibility of the $\mathrm{SARMA}(3, 0) \times (1, 1)_{12}$ model, we compute the roots of the AR polynomial $\phi(x)\Phi(x^{12}) = (1-1.329x+0.257x^2+0.099x^3)(1-0.999x^{12})$ and MA polynomial $\Psi(x^{12}) = 1-0.965x^{12}$. The results suggest that all roots fall outside the unit circle, which means our model is both stationary and invertible. 
+To check for causality and invertibility of the $\mathrm{SARMA}(3, 0) \times (1, 1)_{12}$ model, we compute the roots of the AR polynomial $\phi(x)\Phi(x^{12}) = (1-1.329x+0.257x^2+0.099x^3)(1-0.999x^{12})$ and MA polynomial $\Psi(x^{12}) = 1-0.965x^{12}$. The results suggest that all roots fall outside the unit circle, which means our model is both causal and invertible. 
 
 ```{r}
 # unit root test
@@ -348,7 +354,7 @@ data_huron %>%
 generate_acf_qqplot(m20_11)
 ```
 
-Again, we compute the roots of the AR polynomial $\phi(x)\Phi(x^{12}) = (1-1.369x+0.394x^2)(1-x^{12})$ and MA polynomial $\Psi(x^{12}) = 1-0.974x^{12}$. All roots are outside the unit circle, indicating that the model is both stationary and invertible. 
+Again, we compute the roots of the AR polynomial $\phi(x)\Phi(x^{12}) = (1-1.369x+0.394x^2)(1-x^{12})$ and MA polynomial $\Psi(x^{12}) = 1-0.974x^{12}$. All roots are outside the unit circle, indicating that the model is both causal and invertible. 
 
 ```{r}
 # unit root test
@@ -385,23 +391,23 @@ tibble(
 
 
 ```{r, eval=FALSE, fig.width=6, fig.height=3}
-# Profile log-likelihood test. Setting `eval=FALSE` will skip the evaluation
-K = 100
-ar3 = seq(-0.8, -0.01, length.out = K)
-profile_loglik = numeric(K)
-xreg = poly(date_num, 3)
-for (k in 1:K) {
-  loglik_k = try(
-    logLik(
-      arima(level, c(3, 0, 0), xreg = xreg,
-            seasonal = list(order = c(1, 0, 1), period = 12), method='ML',
-            fixed = c(NA, NA, ar3[k], NA, NA, NA, NA, NA, NA))
-    ), silent = TRUE
-  )
-  profile_loglik[k] = ifelse(inherits(loglik_k, "try-error"), NA, loglik_k)
-}
-
-plot(profile_loglik ~ ar3, type = "l")
+# # Profile log-likelihood test. Setting `eval=FALSE` will skip the evaluation
+# K = 100
+# ar3 = seq(-0.8, -0.01, length.out = K)
+# profile_loglik = numeric(K)
+# xreg = poly(date_num, 3)
+# for (k in 1:K) {
+#   loglik_k = try(
+#     logLik(
+#       arima(level, c(3, 0, 0), xreg = xreg,
+#             seasonal = list(order = c(1, 0, 1), period = 12), method='ML',
+#             fixed = c(NA, NA, ar3[k], NA, NA, NA, NA, NA, NA))
+#     ), silent = TRUE
+#   )
+#   profile_loglik[k] = ifelse(inherits(loglik_k, "try-error"), NA, loglik_k)
+# }
+# 
+# plot(profile_loglik ~ ar3, type = "l")
 ```
 
 For this test, the null hypothesis $H_{0}$ corresponds to the $\mathrm{SARMA}(2, 0)\times(1, 1)_{12}$ model, and the alternative hypothesis $H_{1}$ corresponds to the $\mathrm{SARMA}(3, 0)\times(1, 1)_{12}$ model. Recall that Wilks' Theorem states that $\Lambda = -2(\ell_0 - \ell_1) \sim \chi^2_\nu$, where $\nu$ is the difference in degrees of freedom between the two models. In this case, $\nu = 1$.
@@ -412,7 +418,7 @@ We make a final plot to show the fit of our model against the data.
 
 ```{r, echo=FALSE, fig.width=8, fig.height=3}
 data_huron %>%
-  mutate(fit = MSL - m30_11$residuals) %>%
+  mutate(fit = MSL + m30_11$residuals) %>%
   ggplot() + 
     theme_bw() +
     geom_line(aes(Date, MSL, color="Original data"), size=1, alpha=0.5) +
@@ -477,10 +483,7 @@ ggplot() +
         plot.title=element_text(hjust=0.5))
 ```
 
-
-[The paragraph below may not be accurate: The plot presents the centered data; if we compare the original data, Lake Michigan-Huron's water level has always been higher than Lake Erie's. ]{.comment}
-
-We see that Lake Erie's water levels were relatively lower than Lake Michigan's in the 1980s, relatively higher than Lake Michigan's in the 2000s, and has since caught up. The reason for this is unknown.
+While Lake Michigan's water levels have always been higher than Lake Erie's, We see that Lake Erie's water levels have varied less drastically than Lake Michigan's from the years 1980-2012 (the rate of change has since caught up). The reason for this is unknown, and scientists may want to take note of both these observations.
 
 Let us also compare the two series by investigating the cross-correlation function (CCF); if there is a noticeable pattern, it may be worth analyzing further.
 
@@ -488,35 +491,26 @@ Let us also compare the two series by investigating the cross-correlation functi
 ccf(data_huron$MSL, data_erie$MSL, main="sample CCF")
 ```
 
-
-[The maximum value should correspond to lag 1?]{.comment}
-
-```{r, echo=TRUE}
-# TODO: delete this later!
-ccf_val = ccf(data_huron$MSL, data_erie$MSL, plot = FALSE)
-ccf_val$lag[which.max(ccf_val$acf)]
-```
-
-The cross-correlations are clearly significant at each of these lags, reaching a maximum at lag 0, supporting the assertion that these lake levels vary together. The plot also shows an oscillatory pattern, motivating further investigation in the frequency domain. Let's take a look at the coherency between the two time series -- specifically, we hope to analyze the phase plot to check whether or not the trend in one lake lags the other.
+The cross-correlations are clearly significant at each of these lags, reaching a maximum at lag 1, supporting the assertion that these lake levels vary together. The plot also shows an oscillatory pattern, motivating further investigation in the frequency domain. Since there is evidence that Lake Erie's trend precedes Lake Michigan's by about one month, let's take a look at the coherency between the two time series to confirm.
 
 ```{r, echo=FALSE, fig.width=6, fig.height=4}
 s <- spectrum(cbind(data_huron$MSL,data_erie$MSL), spans=c(10,15,10), plot=F)
 plot(s, plot.type="phase", main="Phase Plot of Erie-Michigan Coherency")
 ```
 
-From the phase plot, we can conclude that Lake Erie's and Lake Michigan's water levels show strong evidence of being *pro-cyclical*; that is, they tend to vary together and not at a lag. 
+From the phase plot, we can conclude that Lake Erie's and Lake Michigan's water levels show strong evidence of being *pro-cyclical*; however, the negative phase (with narrow confidence interval) at frequencies $\omega \in [0.06, 0.1]$ suggest that Lake Michigan does lag Lake Erie by about one month, which would correspond to a frequency of $\omega \approx 0.083$ in the phase plot. One explanation could be geography and climate patterns -- Lake Michigan is located a little further north than Lake Erie, and so seasonal impacts on Lake Michigan may be slightly delayed when compared to Lake Erie.
 
 ------------
 
 ## Conclusion
 
-From the above analyses, we can see that the Lake Michigan water levels are highly non-stationary, varying wildly and erratically. The best fitting model was a cubic function of time, with $\mathrm{SARMA}(3, 0) \times (1, 1)_{12}$ errors. 
+From the above analyses, we can see that the Lake Michigan water levels are highly non-stationary, varying wildly and erratically. The best fitting model was a cubic function of time, with $\mathrm{SARMA}(3, 0) \times (1, 1)_{12}$ errors. The water levels varied from a record high in the 1980s to a somewhat stagnant low period in the 2000s before rising again. Thus, there is no clear evidence for a one-way trend explaining the past 10 years. However, we will likely have to wait a few more decades to see how this pattern plays out. In addition, the recent rise is much sharper than in past decades; combined with the unpredictability which with the data vary, this could be a reason for concern. The takeaway: the current rise in lake levels is not unprecedented, since the mid-1980s had comparable water levels (albeit by only a small margin).
 
-The water levels varied from a record high in the 1980s to a somewhat stagnant low period in the 2000s. The takeaway: the current rise in lake levels is not unprecedented, since the 1980s had comparable water levels (albeit by only a small margin). There is no clear evidence for a one-way trend explaining the past 10 years. However, we will likely have to wait a few more decades to see how this plays out. In addition, the recent rise is much sharper than in past decades; combined with the unpredictability which with the data vary, this could be a reason for concern.
+As our intuition expected, there is a very distinct yearly pattern that can most likely be attributed to precipitation patterns driven by seasonal variation. There is slight evidence of a longer-term 8-10 year trend, but more data would be needed to conclude for certain, as this pattern disappears after two "periods".
 
-As our intuition expected, there is a very distinct yearly pattern that can most likely be attributed to precipitation patterns driven by seasonal variation. It is good to see prior knowledge confirmed in the data. There is slight evidence of a longer-term 8-10 year trend, but more data would be needed to conclude for certain, as this pattern disappears after two "periods".
+From comparing Lake Erie's water levels to Lake Michigan's, we see that the two lakes exhibit pro-cyclical behavior. They exhibit the same seasonal pattern and general trend, which makes sense due to their relative closeness and similar climate patterns. However, there is evidence that Lake Erie's water levels tend to precede Lake Michigan's by about one month, which could also be explained by Lake Erie warming before Lake Michigan due to its location. The takeaway: if Lake Erie is experiencing high water levels, expect Lake Michigan to see the same in a month.
 
-From comparing Lake Erie's water levels to Lake Michigan's, we see that the two lakes exhibit pro-cyclical behavior. They have the same seasonal pattern and general trend, which makes sense due to similar rainfall patterns in the Great Lakes region. Surprsingly, Lake Erie's water levels have fluctuated a bit less than Lake Michigan's, despite its smaller size and depth [[7](https://en.wikipedia.org/wiki/Lake_Erie)]. While the data in one lake do not lag in another, it is valuable to note that what affects one lake, can also affect the other.
+Surprisingly, Lake Erie's water levels have fluctuated a bit less than Lake Michigan's, despite its smaller size and depth [[7](https://en.wikipedia.org/wiki/Lake_Erie)]; this is worth investigating further. Overall, it is valuable to note that what affects one lake, can also affect the other.
 
 While Lake Michigan water levels have increased in the past 10 years, the Lake's water levels are within historical variation; its residents need not worry, yet.
 
