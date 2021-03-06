@@ -494,8 +494,9 @@ ccf(data_huron$MSL, data_erie$MSL, main="sample CCF")
 The cross-correlations are clearly significant at each of these lags, reaching a maximum at lag 1, supporting the assertion that these lake levels vary together. The plot also shows an oscillatory pattern, motivating further investigation in the frequency domain. Since there is evidence that Lake Erie's trend precedes Lake Michigan's by about one month, let's take a look at the coherency between the two time series to confirm.
 
 ```{r, echo=FALSE, fig.width=6, fig.height=4}
-s <- spectrum(cbind(data_huron$MSL,data_erie$MSL), spans=c(10,15,10), plot=F)
+s <- spectrum(cbind(data_huron$MSL,data_erie$MSL), spans=c(15,15,15), plot=F)
 plot(s, plot.type="phase", main="Phase Plot of Erie-Michigan Coherency")
+abline(h=0, col='red', lty=2)
 ```
 
 From the phase plot, we can conclude that Lake Erie's and Lake Michigan's water levels show strong evidence of being *pro-cyclical*; however, the negative phase (with narrow confidence interval) at frequencies $\omega \in [0.06, 0.1]$ suggest that Lake Michigan does lag Lake Erie by about one month, which would correspond to a frequency of $\omega \approx 0.083$ in the phase plot. One explanation could be geography and climate patterns -- Lake Michigan is located a little further north than Lake Erie, and so seasonal impacts on Lake Michigan may be slightly delayed when compared to Lake Erie.
