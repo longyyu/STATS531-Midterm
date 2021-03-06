@@ -33,12 +33,31 @@ span.math{ /* Formulas */
   border-color: #f2f2f2;
   font-weight: 600;
 }
+table{
+  margin-left: auto; /* center the tables */
+  margin-right: auto; /* center the tables */
+  margin-bottom: 10px; /* add vertical space after table */
+}
+tr td {
+  min-width: 70px;
+  height: 35px;
+}
+tr:nth-child(odd) td {
+  background-color: #f9f9f9; /* create the striped effect */
+}
+tr td:nth-child(1) {
+  font-weight: 600; /* bold the first column */
+}
+div#coef tr th, div#coef tr td {
+  text-align: center;
+  padding-left: 10px;
+  padding-right: 10px;
+}
 ```
 
 ```{r, echo = FALSE}
 opar = par()
 library(tidyverse)
-library(kableExtra)
 
 generate_aic_table=function(data, P, Q, D=0, ...){
 	table=matrix(NA, (P+1), (Q+1))
@@ -60,17 +79,7 @@ generate_aic_table=function(data, P, Q, D=0, ...){
 format_aic_tables = function(table, ...) {
   min_idx = which(table == min(table, na.rm = TRUE), arr.ind = TRUE)
   table %>% 
-    knitr::kable(
-      format='html', digits=2, escape=FALSE, ...
-    ) %>%
-    row_spec(row = 0, align = 'c') %>%
-    column_spec(column = 1, bold = TRUE) %>%
-    kable_styling("striped", full_width = FALSE) %>%
-    add_footnote(sprintf(
-      "Model with the lowest AIC: %s %s, AIC = %4.2f\n",
-      rownames(table)[min_idx[1, 1]], colnames(table)[min_idx[1, 2]],
-      min(table, na.rm = TRUE)
-    ))
+    knitr::kable(format='html', digits=2, escape=FALSE, ...)
 }
 
 generate_acf_qqplot = function(model) {
@@ -184,9 +193,8 @@ for(i in 1:5) {
 }
 dimnames(table) = list(paste("degree ", 1:5, ': ', sep=""))
 
-table %>% # kbl(f
-  kbl(format='html', digits=2, escape=FALSE, caption='<center style=\'color:black\'><strong>AIC values</strong></center>') %>%
-  kable_styling("striped", full_width = FALSE)
+table %>% 
+  knitr::kable(format='html', digits=2, escape=FALSE, caption='<center style=\'color:black\'><strong>AIC values</strong></center>')
 ```
 
 The lowest AIC value is attained by the quartic fit; however, plotting the cubic and quartic lines of best fit indicate that they are quite close, so we will remain parsimonious and select the cubic function to model our trend.
@@ -372,6 +380,7 @@ lapply(roots, abs)
 
 Comparing the estimated coefficients of the two models, we can see that the `ar3` estimate is close to zero and on the edge of statistical significance as measured by the Fisher information. This motivates us to conduct a formal hypothesis test using Wilks' approximation. 
 
+<div id="coef">
 ```{r}
 tibble(
   model="SARMA(3,0) x (1,1)", Term = names(m30_11$coef), 
@@ -385,10 +394,12 @@ tibble(
   ) %>%
   pivot_wider(id_cols = Term, names_from = model, values_from = est, values_fill = list(est = "")) %>%
   mutate(Term = ifelse(Term %in% c("1", "2", "3"), sprintf("$\\mathrm{t}^%s$", Term), Term)) %>%
-  knitr::kable(caption = "<center style=\'color:black\'><strong>Coefficient Estimates (S.E.)</strong></style>", escape = TRUE) %>%
-  kable_styling(bootstrap_options = "striped", full_width = FALSE)
+  knitr::kable(
+    format = "html", escape = TRUE, align = "lcc", 
+    caption = "<center style=\'color:black\'><strong>Coefficient Estimates (S.E.)</strong></style>"
+  )
 ```
-
+</div>
 
 ```{r, eval=FALSE, fig.width=6, fig.height=3}
 # # Profile log-likelihood test. Setting `eval=FALSE` will skip the evaluation
@@ -483,7 +494,7 @@ ggplot() +
         plot.title=element_text(hjust=0.5))
 ```
 
-While Lake Michigan's water levels have always been higher than Lake Erie's, We see that Lake Erie's water levels have varied less drastically than Lake Michigan's from the years 1980-2012 (the rate of change has since caught up). The reason for this is unknown, and scientists may want to take note of both these observations.
+While Lake Michigan's water levels have always been higher than Lake Erie's, we see that Lake Erie's water levels have varied less drastically than Lake Michigan's from the years 1980-2012 (the rate of change has since caught up). The reason for this is unknown, and scientists may want to take note of both these observations.
 
 Let us also compare the two series by investigating the cross-correlation function (CCF); if there is a noticeable pattern, it may be worth analyzing further.
 
